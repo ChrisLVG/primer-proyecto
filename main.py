@@ -34,3 +34,26 @@ def crear_cliente(cliente: shcemas.User, db: session = Depends(get_db)):
     db.commit()
     db.refresh(nuevo_cliente)
     return nuevo_cliente
+
+@app.get("/servicios/")
+def listar_servicios(db: session = Depends(get_db)):
+    # Ejecutamos la consulta SQL de lectura mapeada a través de SQLAlchemy
+    servicios = db.query(models.Servicio).all()
+    return servicios
+
+@app.post("/servicios/", response_model=shcemas.serviceResponse)
+def crear_servicio(servicio: shcemas.service, db: session = Depends(get_db)):
+    # Verificamos si el servicio ya existe en la base de datos
+    existing_servicio = db.query(models.Servicio).filter(models.Servicio.nombre == servicio.nombre).first()
+    if existing_servicio:
+        raise HTTPException(status_code=400, detail="El servicio ya está registrado.")
+
+    nuevo_servicio = models.Servicio(
+        nombre=servicio.nombre,
+        precio=servicio.precio,
+        duracion_minutos=servicio.duracion_minutos
+    )
+    db.add(nuevo_servicio)
+    db.commit()
+    db.refresh(nuevo_servicio)
+    return nuevo_servicio

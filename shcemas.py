@@ -10,3 +10,14 @@ class userresponse(User):
 
     class Config:
         from_attributes = True
+
+class service(BaseModel):
+    nombre: str = Field(..., description="The name of the service")
+    precio: str = Field(..., description="The price of the service")
+    duracion_minutos: str = Field(..., description="The duration of the service in minutes")
+
+class serviceResponse(service):
+    id: str = Field(..., description="The unique identifier of the service")
+
+    class Config:
+        from_attributes = True
