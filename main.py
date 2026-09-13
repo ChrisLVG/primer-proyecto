@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import session
-from database import get_db, engine, Base
+from database import get_db, engine
 import models
 import shcemas
+from datetime import datetime
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -57,3 +58,36 @@ def crear_servicio(servicio: shcemas.service, db: session = Depends(get_db)):
     db.commit()
     db.refresh(nuevo_servicio)
     return nuevo_servicio
+
+@app.get("/citas/")
+def listar_citas(db: session = Depends(get_db)):
+    # Ejecutamos la consulta SQL de lectura mapeada a través de SQLAlchemy
+    citas = db.query(models.Cita).all()
+    return citas
+
+@app.post("/citas/", response_model=shcemas.dateResponse)
+def crear_cita(cita: shcemas.date, db: session = Depends(get_db)):
+    # Verificamos si la cita ya existe en la base de datos
+    existing_cita = db.query(models.Cita).filter(models.Cita.cliente_id == cita.cliente_id, models.Cita.servicio_id == cita.servicio_id, models.Cita.fecha_hora == cita.fecha_hora).first()
+    if existing_cita:
+        raise HTTPException(status_code=400, detail="La cita ya está registrada.")
+
+    # Validamos si el servicio ya existe en la base de datos
+    existing_servicio = db.query(models.Servicio).filter(models.Servicio.id == cita.servicio_id).first()
+    if not existing_servicio:
+        raise HTTPException(status_code=400, detail="El servicio no está registrado.")
+    
+    # Validamos si el cliente ya existe en la base de datos
+    existing_cliente = db.query(models.Cliente).filter(models.Cliente.id == cita.cliente_id).first()
+    if not existing_cliente:
+        raise HTTPException(status_code=400, detail="El cliente no está registrado.")
+
+    nueva_cita = models.Cita(
+        cliente_id=cita.cliente_id,
+        servicio_id=cita.servicio_id,
+        fecha_hora=cita.fecha_hora
+    )
+    db.add(nueva_cita)
+    db.commit()
+    db.refresh(nueva_cita)
+    return nueva_cita
