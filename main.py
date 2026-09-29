@@ -91,3 +91,36 @@ def crear_cita(cita: shcemas.date, db: session = Depends(get_db)):
     db.commit()
     db.refresh(nueva_cita)
     return nueva_cita
+
+@app.patch("/citas/{cita_id}", response_model=shcemas.dateResponse)
+def actualizar_cita(cita_id: str, cita: shcemas.dateupdate, db: session = Depends(get_db)):
+    # Verificamos si la cita existe en la base de datos
+    existing_cita = db.query(models.Cita).filter(models.Cita.id == cita_id).first()
+    if not existing_cita:
+        raise HTTPException(status_code=404, detail="La cita no está registrada.")
+    # Actualizamos los campos de la cita según los datos proporcionados
+    if cita.servicio_id is not None:
+        #Verificamos si el servicio existe en la base de datos    
+        existing_servicio = db.query(models.Servicio).filter(models.Servicio.id == cita.servicio_id).first()
+        if not existing_servicio:
+            raise HTTPException(status_code=400, detail="El servicio no está registrado.")
+        existing_cita.servicio_id = cita.servicio_id
+    if cita.fecha_hora is not None:
+        # Verificamos si la fecha y hora de la cita ya esta ocupada por otra cita de otro cliente   
+        existing_cita_fecha = db.query(models.Cita).filter(models.Cita.fecha_hora == cita.fecha_hora, models.Cita.id != cita_id).first()
+        if existing_cita_fecha:
+            raise HTTPException(status_code=400, detail="La fecha y hora de la cita ya está ocupada por otra cita.")
+        # Verificamos si la fecha y hora de la cita es anterior a la fecha y hora actual
+        if cita.fecha_hora < datetime.now():
+            raise HTTPException(status_code=400, detail="La fecha y hora de la cita no puede ser anterior a la fecha y hora actual.")
+        # Verificamos si la fecha y hora de la cita coincide con la fecha y hora de otra cita del mismo cliente
+        existing_cita_cliente = db.query(models.Cita).filter(models.Cita.cliente_id == existing_cita.cliente_id, models.Cita.fecha_hora == cita.fecha_hora, models.Cita.id != cita_id).first()
+        if existing_cita_cliente:
+            raise HTTPException(status_code=400, detail="La fecha y hora de la cita ya está ocupada por otra cita del mismo cliente.")
+        existing_cita.fecha_hora = cita.fecha_hora
+    if cita.estado is not None:
+        existing_cita.estado = cita.estado
+
+    db.commit()
+    db.refresh(existing_cita)
+    return existing_cita
