@@ -36,6 +36,28 @@ def crear_cliente(cliente: shcemas.User, db: session = Depends(get_db)):
     db.refresh(nuevo_cliente)
     return nuevo_cliente
 
+@app.patch("/clientes/{cliente_id}", response_model=shcemas.userresponse)
+def actualizar_cliente(cliente_id: str, cliente: shcemas.UserUpdate, db: session = Depends(get_db)):
+    cliente_db = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente_db:
+        raise HTTPException(status_code=404, detail="El cliente no está registrado.")
+
+    if cliente.nombre is not None:
+        cliente_db.nombre = cliente.nombre
+
+    if cliente.numero is not None:
+        numero_en_uso = db.query(models.Cliente).filter(models.Cliente.numero == cliente.numero, models.Cliente.id != cliente_id).first()
+        if numero_en_uso:
+            raise HTTPException(status_code=400, detail="El número telefónico ya está asignado a otro cliente.")
+        cliente_db.numero = cliente.numero
+
+    if cliente.correo is not None:
+        cliente_db.correo = cliente.correo
+
+    db.commit()
+    db.refresh(cliente_db)
+    return cliente_db
+
 @app.get("/servicios/")
 def listar_servicios(db: session = Depends(get_db)):
     # Ejecutamos la consulta SQL de lectura mapeada a través de SQLAlchemy
@@ -58,6 +80,28 @@ def crear_servicio(servicio: shcemas.service, db: session = Depends(get_db)):
     db.commit()
     db.refresh(nuevo_servicio)
     return nuevo_servicio
+
+@app.patch("/servicios/{servicio_id}", response_model=shcemas.serviceResponse)
+def actualizar_servicio(servicio_id: str, servicio: shcemas.ServiceUpdate, db: session = Depends(get_db)):
+    servicio_db = db.query(models.Servicio).filter(models.Servicio.id == servicio_id).first()
+    if not servicio_db:
+        raise HTTPException(status_code=404, detail="El servicio no está registrado.")
+
+    if servicio.nombre is not None:
+        servicio_existente = db.query(models.Servicio).filter(models.Servicio.nombre == servicio.nombre, models.Servicio.id != servicio_id).first()
+        if servicio_existente:
+            raise HTTPException(status_code=400, detail="El nombre del servicio ya está registrado.")
+        servicio_db.nombre = servicio.nombre
+
+    if servicio.precio is not None:
+        servicio_db.precio = servicio.precio
+
+    if servicio.duracion_minutos is not None:
+        servicio_db.duracion_minutos = servicio.duracion_minutos
+
+    db.commit()
+    db.refresh(servicio_db)
+    return servicio_db
 
 @app.get("/citas/")
 def listar_citas(db: session = Depends(get_db)):

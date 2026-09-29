@@ -4,7 +4,12 @@ from typing import Optional
 class User(BaseModel):
     nombre: str = Field(..., description="The name of the user")
     numero: str = Field(..., description="The phone number of the user")
-    email: str = Field(..., description="The email address of the user")
+    correo: str = Field(..., description="The email address of the user")
+
+class UserUpdate(BaseModel):
+    nombre: Optional[str] = None
+    numero: Optional[str] = None
+    correo: Optional[str] = None
 
 class userresponse(User):
     id: str = Field(..., description="The unique identifier of the user")
@@ -12,10 +17,16 @@ class userresponse(User):
     class Config:
         from_attributes = True
 
+
 class service(BaseModel):
     nombre: str = Field(..., description="The name of the service")
-    precio: str = Field(..., description="The price of the service")
-    duracion_minutos: str = Field(..., description="The duration of the service in minutes")
+    precio: float = Field(..., description="The price of the service")
+    duracion_minutos: int = Field(..., description="The duration of the service in minutes")
+
+class ServiceUpdate(BaseModel):
+    nombre: Optional[str] = None
+    precio: Optional[float] = None
+    duracion_minutos: Optional[int] = None
 
 class serviceResponse(service):
     id: str = Field(..., description="The unique identifier of the service")
