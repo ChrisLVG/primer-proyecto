@@ -9,10 +9,9 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="API de Gestión de Citas para la barberia",
-    description="Esta API permite gestionar clientes, servicios y citas para un salón de uñas.",
+    description="Esta API permite gestionar clientes, servicios y citas para una barberia.",
     version="1.0.0"
 )
-
 @app.get("/")
 def root():
     return {"message": "Bienvenido a la API de Gestión de Citas para la barberia"}
@@ -62,6 +61,15 @@ def actualizar_cliente(cliente_id: str, cliente: schemas.UserUpdate, db: session
     db.refresh(cliente_db)
     return cliente_db
 
+@app.delete("/clientes/{cliente_id}", response_model=schemas.userresponse)
+def eliminar_cliente(cliente_id: str, cliente: schemas.UserDelete, db: session = Depends(get_db)):
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="El cliente no está registrado.")
+    db.delete(cliente)
+    db.commit()
+    return cliente
+
 @app.get("/servicios/")
 def listar_servicios(db: session = Depends(get_db)):
     # Ejecutamos la consulta SQL de lectura mapeada a través de SQLAlchemy
@@ -106,6 +114,15 @@ def actualizar_servicio(servicio_id: str, servicio: schemas.ServiceUpdate, db: s
     db.commit()
     db.refresh(servicio_db)
     return servicio_db
+
+@app.delete("/servicios/{servicio_id}", response_model=schemas.serviceResponse)
+def eliminar_servicio(servicio_id: str, servicio: schemas.ServiceDelete, db: session = Depends(get_db)):
+    servicio = db.query(models.Servicio).filter(models.Servicio.id == servicio_id).first()
+    if not servicio:
+        raise HTTPException(status_code=404, detail="El servicio no está registrado.")
+    db.delete(servicio)
+    db.commit()
+    return servicio
 
 @app.get("/citas/")
 def listar_citas(db: session = Depends(get_db)):
@@ -171,4 +188,14 @@ def actualizar_cita(cita_id: str, cita: schemas.dateupdate, db: session = Depend
 
     db.commit()
     db.refresh(existing_cita)
+    return existing_cita
+
+@app.delete("/citas/{cita_id}", response_model=schemas.dateResponse)
+def eliminar_cita(cita_id: str, cita: schemas.datedelete, db: session = Depends(get_db)):
+    # Verificamos si la cita existe en la base de datos
+    existing_cita = db.query(models.Cita).filter(models.Cita.id == cita_id).first()
+    if not existing_cita:
+        raise HTTPException(status_code=404, detail="La cita no está registrada.")
+    db.delete(existing_cita)
+    db.commit()
     return existing_cita

@@ -15,7 +15,7 @@
 - models.py: Modelos ORM de la base de datos.
 - schemas.py: Esquemas Pydantic para validación de datos de entrada y salida.
 ## Comandos principales
-- uv run uvicorn primerproyecto.main:app --reload: Para iniciar el servidor de desarrollo de FastAPI con recarga automática.
+- uv run uvicorn src.primer_proyecto.main:app --reload --no-access-log: Para iniciar el servidor de desarrollo de FastAPI con recarga automática.
 ## Convenciones de codigo y estilo
 - Seguir convención PEP 8: snake_case` para funciones/rutas y `PascalCase` para clases. 
 - Usar Type Hints explícitos de Python 3.12+ (ej. list[str], str | None). 
