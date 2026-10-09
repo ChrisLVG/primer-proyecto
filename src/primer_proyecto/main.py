@@ -7,7 +7,7 @@ from datetime import datetime
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="API de Gestión de Citas para la barberia", description="Esta API permite gestionar clientes, servicios y citas para un salón de uñas.", version="1.0.0")
+app = FastAPI(title="API de Gestión de Citas para la barberia, description="Esta API permite gestionar clientes, servicios y citas para un salón de uñas.", version="1.0.0")
 
 @app.get("/")
 def root():
