@@ -4,6 +4,13 @@
 **Backend:** Lenguaje Principal:Python 3.12,Framework Web (API REST):FastAPI,Validación de Datos y Serialización:** **Pydantic (v2),ORM (Object-Relational Mapping):SQLAlchemy (v2),Base de Datos Relacional: SQLite(`citas_unas.db`),Servidor ASGI:Uvicorn,Identificadores Únicos:UUID (Universally Unique Identifier -uuid4),Documentación Automática e Interactiva:OpenAPI / Swagger UI
 **Frontend:** Lenguaje Base: JavaScript (ES6+),Librería / Framework de Interfaz (UI):React.js,Cliente HTTP (Consumo de la API):Axios,Framework de Estilos (Diseño UI/UX):Tailwind CSS,Enrutamiento del Cliente:React Router,Manejo de Sesión y Autenticación:LocalStorage / Cookies HttpOnly
 ## Estructura del proyecto
-- pyproject.toml: Configuración del proyecto Python y dependencias de uv (FastAPI, Uvicorn). - \`README.md\`: Documentación general del proyecto. 
+- pyproject.toml: Configuración del proyecto Python y dependencias de uv (FastAPI, Uvicorn). 
+- README.md: Documentación general del proyecto. 
 - .python-version: Versión de Python especificada para el entorno. 
-- .gitignore\`: Archivos excluidos de Git (excluye .venv/, \_\_pycache\_\_/ y \*.db). - \`src/primer\_proyecto/\`: [Existente] Código fuente de la aplicación. - \`AGENTS.md\`: Reglas y guardarraíles del repositorio para el agente de IA. - \`main.py\`: Punto de entrada principal e itineración de rutas de la API FastAPI. - \`database.py\`: Configuración de SQLAlchemy y gestión de sesiones de base de datos. - \`models.py\`: Modelos ORM de la base de datos. - \`schemas.py\`: Esquemas Pydantic para validación de datos de entrada y salida.
+- .gitignore: Archivos excluidos de Git (excluye .venv/, __pycache__). 
+- src/primerproyecto/: Código fuente de la aplicación.
+- AGENTS.md: Reglas y guardarraíles del repositorio para el agente de IA.
+- main.py: Punto de entrada principal e itineración de rutas de la API FastAPI.
+- database.py: Configuración de SQLAlchemy y gestión de sesiones de base de datos.
+- models.py: Modelos ORM de la base de datos.
+- schemas.py: Esquemas Pydantic para validación de datos de entrada y salida.
