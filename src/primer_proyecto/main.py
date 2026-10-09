@@ -1,13 +1,17 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import session
-from database import get_db, engine
-import models
-import shcemas
+from .database import get_db, engine
+from . import models
+from . import schemas
 from datetime import datetime
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="API de Gestión de Citas para la barberia, description="Esta API permite gestionar clientes, servicios y citas para un salón de uñas.", version="1.0.0")
+app = FastAPI(
+    title="API de Gestión de Citas para la barberia",
+    description="Esta API permite gestionar clientes, servicios y citas para un salón de uñas.",
+    version="1.0.0"
+)
 
 @app.get("/")
 def root():
@@ -19,8 +23,8 @@ def listar_clientes(db: session = Depends(get_db)):
     clientes = db.query(models.Cliente).all()
     return clientes
 
-@app.post("/clientes/", response_model=shcemas.userresponse)
-def crear_cliente(cliente: shcemas.User, db: session = Depends(get_db)):
+@app.post("/clientes/", response_model=schemas.userresponse)
+def crear_cliente(cliente: schemas.User, db: session = Depends(get_db)):
     # Verificamos si el correo ya existe en la base de datos
     existing_cliente = db.query(models.Cliente).filter(models.Cliente.correo == cliente.email).first()
     if existing_cliente:
@@ -36,8 +40,8 @@ def crear_cliente(cliente: shcemas.User, db: session = Depends(get_db)):
     db.refresh(nuevo_cliente)
     return nuevo_cliente
 
-@app.patch("/clientes/{cliente_id}", response_model=shcemas.userresponse)
-def actualizar_cliente(cliente_id: str, cliente: shcemas.UserUpdate, db: session = Depends(get_db)):
+@app.patch("/clientes/{cliente_id}", response_model=schemas.userresponse)
+def actualizar_cliente(cliente_id: str, cliente: schemas.UserUpdate, db: session = Depends(get_db)):
     cliente_db = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
     if not cliente_db:
         raise HTTPException(status_code=404, detail="El cliente no está registrado.")
@@ -64,8 +68,8 @@ def listar_servicios(db: session = Depends(get_db)):
     servicios = db.query(models.Servicio).all()
     return servicios
 
-@app.post("/servicios/", response_model=shcemas.serviceResponse)
-def crear_servicio(servicio: shcemas.service, db: session = Depends(get_db)):
+@app.post("/servicios/", response_model=schemas.serviceResponse)
+def crear_servicio(servicio: schemas.service, db: session = Depends(get_db)):
     # Verificamos si el servicio ya existe en la base de datos
     existing_servicio = db.query(models.Servicio).filter(models.Servicio.nombre == servicio.nombre).first()
     if existing_servicio:
@@ -81,8 +85,8 @@ def crear_servicio(servicio: shcemas.service, db: session = Depends(get_db)):
     db.refresh(nuevo_servicio)
     return nuevo_servicio
 
-@app.patch("/servicios/{servicio_id}", response_model=shcemas.serviceResponse)
-def actualizar_servicio(servicio_id: str, servicio: shcemas.ServiceUpdate, db: session = Depends(get_db)):
+@app.patch("/servicios/{servicio_id}", response_model=schemas.serviceResponse)
+def actualizar_servicio(servicio_id: str, servicio: schemas.ServiceUpdate, db: session = Depends(get_db)):
     servicio_db = db.query(models.Servicio).filter(models.Servicio.id == servicio_id).first()
     if not servicio_db:
         raise HTTPException(status_code=404, detail="El servicio no está registrado.")
@@ -109,8 +113,8 @@ def listar_citas(db: session = Depends(get_db)):
     citas = db.query(models.Cita).all()
     return citas
 
-@app.post("/citas/", response_model=shcemas.dateResponse)
-def crear_cita(cita: shcemas.date, db: session = Depends(get_db)):
+@app.post("/citas/", response_model=schemas.dateResponse)
+def crear_cita(cita: schemas.date, db: session = Depends(get_db)):
     # Verificamos si la cita ya existe en la base de datos
     existing_cita = db.query(models.Cita).filter(models.Cita.cliente_id == cita.cliente_id, models.Cita.servicio_id == cita.servicio_id, models.Cita.fecha_hora == cita.fecha_hora).first()
     if existing_cita:
@@ -136,8 +140,8 @@ def crear_cita(cita: shcemas.date, db: session = Depends(get_db)):
     db.refresh(nueva_cita)
     return nueva_cita
 
-@app.patch("/citas/{cita_id}", response_model=shcemas.dateResponse)
-def actualizar_cita(cita_id: str, cita: shcemas.dateupdate, db: session = Depends(get_db)):
+@app.patch("/citas/{cita_id}", response_model=schemas.dateResponse)
+def actualizar_cita(cita_id: str, cita: schemas.dateupdate, db: session = Depends(get_db)):
     # Verificamos si la cita existe en la base de datos
     existing_cita = db.query(models.Cita).filter(models.Cita.id == cita_id).first()
     if not existing_cita:

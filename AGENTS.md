@@ -14,3 +14,26 @@
 - database.py: Configuración de SQLAlchemy y gestión de sesiones de base de datos.
 - models.py: Modelos ORM de la base de datos.
 - schemas.py: Esquemas Pydantic para validación de datos de entrada y salida.
+## Comandos principales
+- uv run uvicorn primerproyecto.main:app --reload: Para iniciar el servidor de desarrollo de FastAPI con recarga automática.
+## Convenciones de codigo y estilo
+- Seguir convención PEP 8: snake_case` para funciones/rutas y `PascalCase` para clases. 
+- Usar Type Hints explícitos de Python 3.12+ (ej. list[str], str | None). 
+- Redactar comentarios y docstrings en español.
+- Usar ConfigDict(from_attributes=True) en los esquemas Pydantic de respuesta.
+- NUNCA mezcles modelos de SQLAlchemy (models.py) con esquemas de validación Pydantic (schemas.py).
+- Inyectar la sesión de base de datos en los endpoints de `main.py` usando únicamente `Depends(get_db)`.
+- Retornar errores de negocio mediante `HTTPException` de FastAPI (`400`, `404`, `422`).
+- Ejecutar `db.rollback()` explícito en bloques `try/except` ante fallos de escritura en SQLite.
+## Limites y prohibiciones(Lo que NO debes hacer)
+- NUNCA crees ni elimines archivos o carpetas nuevas sin proponérselo al usuario y obtener confirmación explícita.
+- NUNCA intentes leer, inspeccionar o modificar directorios o archivos ignorados (`.venv/`, `__pycache__/`, archivos `.db` o `.lock`).
+- NUNCA ejecutes comandos para instalar librerías (`uv add`, `pip install`) ni modifiques `pyproject.toml` sin aprobación previa del usuario.
+- NUNCA alteres los modelos ORM de SQLAlchemy (`models.py`) ni cambies la estructura de las tablas sin la aprobacion previa del usuario y confirmando los requerimientos de la base de datos
+- NUNCA ejecutes scripts o comandos que borren o reinicien los datos de la base de datos local (`citas_uñas.db`) a menos que el usuario lo solicite explícitamente.
+- NUNCA reescribas o elimines funciones existentes que estén operativas; realiza únicamente cambios incrementales y modularizados
+- NUNCA dupliques lógica de negocio o utilidades que ya existan en otros archivos del proyecto
+- NUNCA ejecutes comandos destructivos en la terminal (ej. `rm`, `del`, detención de procesos globales) sin la aprobacion previa del usuario
+# Flujo de trabajo y memoria
+- Antes de iniciar una tarea, lee `memory.md` para conocer el estado actual y las decisiones previas
+- Al finalizar cada tarea, actualiza `memory.md` resumiendo las modificaciones realizadas, aprendizajes y próximos pasos
