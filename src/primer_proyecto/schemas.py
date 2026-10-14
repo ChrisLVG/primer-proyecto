@@ -1,53 +1,84 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional
-class User(BaseModel):
-    nombre: str = Field(..., description="The name of the user")
-    numero: str = Field(..., description="The phone number of the user")
-    correo: str = Field(..., description="The email address of the user")
 
-class UserUpdate(BaseModel):
-    nombre: Optional[str] = None
-    numero: Optional[str] = None
-    correo: Optional[str] = None
 
-class UserDelete(BaseModel):
-    id: str = Field(..., description="The unique identifier of the user")
-class userresponse(User):
-    id: str = Field(..., description="The unique identifier of the user")
+# --- Usuarios ---
 
-    class Config:
-        from_attributes = True
+class UsuarioCreate(BaseModel):
+    nombre: str = Field(..., description="El nombre del usuario")
+    numero: str = Field(..., description="El número de teléfono del usuario")
+    correo: str = Field(..., description="El correo electrónico del usuario")
 
-class service(BaseModel):
-    nombre: str = Field(..., description="The name of the service")
-    precio: float = Field(..., description="The price of the service")
-    duracion_minutos: int = Field(..., description="The duration of the service in minutes")
 
-class ServiceUpdate(BaseModel):
-    nombre: Optional[str] = None
-    precio: Optional[float] = None
-    duracion_minutos: Optional[int] = None
-class ServiceDelete(BaseModel):
-    id: str = Field(..., description="The unique identifier of the service")
-class serviceResponse(service):
-    id: str = Field(..., description="The unique identifier of the service")
+class UsuarioUpdate(BaseModel):
+    nombre: str | None = None
+    numero: str | None = None
+    correo: str | None = None
+    rol: str | None = None
 
-    class Config:
-        from_attributes = True
-class date(BaseModel):
-    cliente_id: str = Field(..., description="The ID of the client")
-    servicio_id: str = Field(..., description="The ID of the service")
-    fecha_hora: datetime = Field(..., description="The date and time of the appointment")
-class dateupdate(BaseModel):
-    servicio_id: Optional[str] = None
-    fecha_hora: Optional[datetime] = None
-    estado: Optional[str] = None
 
-class datedelete(BaseModel):
-    id: str = Field(..., description="The unique identifier of the appointment")
-class dateResponse(date):
-    id: str = Field(..., description="The unique identifier of the appointment")
-    estado: str = Field(..., description="The status of the appointment")
-    class Config:
-        from_attributes = True
+class UsuarioDelete(BaseModel):
+    id: str = Field(..., description="El identificador único del usuario")
+
+
+class UsuarioResponse(UsuarioCreate):
+    id: str = Field(..., description="El identificador único del usuario")
+    rol: str = Field(..., description="El rol del usuario: 'usuario' o 'barbero'")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Servicios ---
+
+class ServicioCreate(BaseModel):
+    nombre: str = Field(..., description="El nombre del servicio")
+    precio: float = Field(..., description="El precio del servicio")
+    duracion_minutos: int = Field(..., description="La duración del servicio en minutos")
+
+
+class ServicioUpdate(BaseModel):
+    nombre: str | None = None
+    precio: float | None = None
+    duracion_minutos: int | None = None
+
+
+class ServicioDelete(BaseModel):
+    id: str = Field(..., description="El identificador único del servicio")
+
+
+class ServicioResponse(ServicioCreate):
+    id: str = Field(..., description="El identificador único del servicio")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Citas ---
+
+class CitaCreate(BaseModel):
+    usuario_id: str = Field(..., description="El ID del usuario que agendas la cita")
+    servicios_ids: list[str] = Field(..., min_length=1, description="Los IDs de los servicios incluidos en la cita")
+    fecha_hora: datetime = Field(..., description="La fecha y hora de la cita")
+    origen: Optional[str] | None
+
+
+class CitaUpdate(BaseModel):
+    servicios_ids: list[str] | None = Field(None, min_length=1, description="Los IDs de los servicios; si se envía, reemplaza el conjunto completo")
+    fecha_hora: datetime | None = None
+    estado: str | None = None
+
+
+class CitaDelete(BaseModel):
+    id: str = Field(..., description="El identificador único de la cita")
+
+
+class CitaResponse(BaseModel):
+    id: str = Field(..., description="El identificador único de la cita")
+    usuario_id: str = Field(..., description="El ID del usuario de la cita")
+    servicios: list[ServicioResponse] = Field(..., description="Los servicios incluidos en la cita")
+    fecha_hora: datetime = Field(..., description="La fecha y hora de la cita")
+    estado: str = Field(..., description="El estado de la cita")
+    origen: str = Field(..., description="El origen de la cita: 'usuario' o 'barbero'")
+    precio_total: float = Field(..., description="La suma de los precios de los servicios de la cita")
+
+    model_config = ConfigDict(from_attributes=True)
