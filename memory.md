@@ -6,6 +6,7 @@ CRUD completo de usuarios, servicios y citas operativa y verificada (34/34 casos
 Pendiente: solapamiento de horarios y sistema de autenticación.
 
 ## Aprendizajes y hallazgos
+- Se desversionaron los `.pyc` y la base SQLite que estaban en Git pese a estar cubiertos por `.gitignore`; sus copias locales se conservaron.
 - La relación cita-servicios es **N:M**: se resolvió con la tabla intermedia `cita_servicio` y clave primaria compuesta. El modelo 1:N anterior obligaba a duplicar citas.
 - `create_all()` solo crea tablas faltantes: **no altera ni renombra las existentes**. Sin Alembic, cambiar el esquema obliga a regenerar la base (con pérdida de datos) o migrar a mano por SQL.
 - Un `AttributeError` en un join (`models.cita_servicio` en vez de `models.CitaServicio`) pasó inadvertido porque estaba fuera del bloque `try/except`. Verificar el status code en las pruebas, no solo los datos.
