@@ -94,17 +94,41 @@ def _normalizar_naive(fecha_hora: datetime) -> datetime:
 
 
 def _a_inicio_del_dia(fecha: datetime | date) -> datetime:
-    """Convierte una fecha en el instante inicial de ese día (00:00:00)."""
+    """Convierte una fecha en el instante inicial de ese día (00:00:00).
+
+    Si ya es un datetime con hora, se devuelve ese instante exacto (normalizado a naive).
+    """
     if isinstance(fecha, datetime):
         return _normalizar_naive(fecha)
     return datetime.combine(fecha, time.min)
 
 
 def _a_fin_del_dia(fecha: datetime | date) -> datetime:
-    """Convierte una fecha en el instante final de ese día (23:59:59)."""
+    """Convierte una fecha en el instante final de ese día (23:59:59.999999).
+
+    Si ya es un datetime con hora, se devuelve ese instante exacto (normalizado a naive).
+    """
     if isinstance(fecha, datetime):
         return _normalizar_naive(fecha)
     return datetime.combine(fecha, time.max)
+
+
+def _a_fin_del_dia_de(fecha: datetime | date) -> datetime:
+    """Devuelve el último instante del día de la fecha indicada, ignorando la hora que traiga."""
+    if isinstance(fecha, datetime):
+        dia = fecha.astimezone().date() if fecha.tzinfo is not None else fecha.date()
+    else:
+        dia = fecha
+    return datetime.combine(dia, time.max)
+
+
+def _a_inicio_del_dia_de(fecha: datetime | date) -> datetime:
+    """Devuelve el primer instante del día de la fecha indicada, ignorando la hora que traiga."""
+    if isinstance(fecha, datetime):
+        dia = fecha.astimezone().date() if fecha.tzinfo is not None else fecha.date()
+    else:
+        dia = fecha
+    return datetime.combine(dia, time.min)
 
 
 @app.get("/")
@@ -274,18 +298,85 @@ def eliminar_servicio(servicio_id: str, db: Session = Depends(get_db)):
 
 @app.get("/citas/", response_model=list[schemas.CitaResponse])
 def listar_citas(
+    fecha_desde: date | datetime | None = Query(
+        None, description="Filtra las citas desde esta fecha (inclusive). Si se envía como fecha sin hora, cubre el día completo"
+    ),
+    fecha_hasta: date | datetime | None = Query(
+        None, description="Filtra las citas hasta esta fecha (inclusive). Si se envía como fecha sin hora, cubre el día completo"
+    ),
+    estado: str | None = Query(
+        None, description="Filtra las citas por estado: 'pendiente', 'confirmada', 'cancelada' o 'terminada'"
+    ),
+    usuario_id: str | None = Query(None, description="Filtra las citas por usuario"),
     origen: str | None = Query(None, description="Filtra las citas por origen: 'usuario' o 'barbero'"),
+    limit: int = Query(100, ge=1, le=500, description="Máximo de citas a devolver"),
+    offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
     db: Session = Depends(get_db)
 ):
-    """Lista las citas registradas. Si se indica 'origen', devuelve solo las creadas por ese tipo de cuenta."""
+    """Lista las citas registradas, ordenadas por fecha ascendente.
+
+    Todos los filtros son opcionales y se combinan entre sí (AND). Si no se indica ninguno,
+    devuelve todas las citas.
+    """
+    # Validamos los filtros antes de consultar para no devolver datos con parámetros inválidos
+    if origen is not None and origen not in ("usuario", "barbero"):
+        raise HTTPException(status_code=400, detail="El origen debe ser 'usuario' o 'barbero'.")
+
+    if estado is not None and estado not in ("pendiente", "confirmada", "cancelada", "terminada"):
+        raise HTTPException(
+            status_code=400,
+            detail="El estado debe ser uno de: pendiente, confirmada, cancelada, terminada."
+        )
+
+    if usuario_id is not None:
+        existing_usuario = db.query(models.Usuario).filter(models.Usuario.id == usuario_id).first()
+        if not existing_usuario:
+            raise HTTPException(status_code=400, detail="El usuario no está registrado.")
+
+    # Convertimos las fechas al instante correspondiente. Si solo se envía uno de los dos extremos,
+    # se cubre el día completo de esa fecha; si se envían ambos, se cubren los días completos de
+    # cada extremo y las citas intermedias.
+    if fecha_desde is not None and fecha_hasta is not None:
+        inicio = _a_inicio_del_dia(fecha_desde)
+        fin = _a_fin_del_dia(fecha_hasta)
+    elif fecha_desde is not None:
+        inicio = _a_inicio_del_dia_de(fecha_desde)
+        fin = _a_fin_del_dia_de(fecha_desde)
+    elif fecha_hasta is not None:
+        inicio = _a_inicio_del_dia_de(fecha_hasta)
+        fin = _a_fin_del_dia_de(fecha_hasta)
+    else:
+        inicio = None
+        fin = None
+
+    if inicio is not None and fin is not None and inicio > fin:
+        raise HTTPException(
+            status_code=400,
+            detail="El rango de fechas es inválido: la fecha inicial no puede ser posterior a la final."
+        )
+
     consulta = db.query(models.Cita).options(selectinload(models.Cita.servicios))
 
     if origen is not None:
-        if origen not in ("usuario", "barbero"):
-            raise HTTPException(status_code=400, detail="El origen debe ser 'usuario' o 'barbero'.")
         consulta = consulta.filter(models.Cita.origen == origen)
 
-    return consulta.all()
+    if estado is not None:
+        consulta = consulta.filter(models.Cita.estado == estado)
+
+    if usuario_id is not None:
+        consulta = consulta.filter(models.Cita.usuario_id == usuario_id)
+
+    if inicio is not None:
+        consulta = consulta.filter(models.Cita.fecha_hora >= inicio)
+
+    if fin is not None:
+        consulta = consulta.filter(models.Cita.fecha_hora <= fin)
+
+    # El id actúa de desempate para que la paginación sea estable cuando varias citas coinciden
+    # en la misma fecha y hora
+    consulta = consulta.order_by(models.Cita.fecha_hora.asc(), models.Cita.id.asc())
+
+    return consulta.offset(offset).limit(limit).all()
 
 
 @app.post("/citas/", response_model=schemas.CitaResponse)
