@@ -389,27 +389,37 @@ def crear_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
     # Validamos que todos los servicios existen y calculamos el precio total
     servicios = _obtener_servicios(db, cita.servicios_ids)
 
+    # Normalizamos la fecha a naive para compararla de forma consistente con lo almacenado
+    fecha_hora = _normalizar_naive(cita.fecha_hora)
+
     # Verificamos si ya existe una cita para este usuario, en esta fecha, con este conjunto de servicios
     existing_cita = db.query(models.Cita).options(selectinload(models.Cita.servicios)).filter(
         models.Cita.usuario_id == cita.usuario_id,
-        models.Cita.fecha_hora == cita.fecha_hora
+        models.Cita.fecha_hora == fecha_hora
     ).all()
     for candidate in existing_cita:
         ids_existentes = {servicio.id for servicio in candidate.servicios}
         if ids_existentes == set(cita.servicios_ids):
             raise HTTPException(status_code=400, detail="La cita ya está registrada.")
 
-    # El origen por defecto es 'usuario'; solo se marca como 'barbero' si viene explícito
+    # El origen por defecto se determina según el rol del usuario; si viene explícito, se respeta
     if cita.origen is None:
-        origen = db.query(models.Usuario).get(cita.usuario_id).rol
+        origen = existing_usuario.rol
     else:
         origen = cita.origen
     if origen not in ("usuario", "barbero"):
         raise HTTPException(status_code=400, detail="El origen debe ser 'usuario' o 'barbero'.")
 
+    # Verificamos que la cita no se solape con ninguna otra cita activa. La cita ocupa el
+    # intervalo [fecha_hora, fecha_hora + duración total de sus servicios).
+    duracion_total = _calcular_duracion_total(servicios)
+
+    if _hay_solapamiento(db, fecha_hora, duracion_total):
+        raise HTTPException(status_code=400, detail="La cita se solapa con otra cita existente.")
+
     nueva_cita = models.Cita(
         usuario_id=cita.usuario_id,
-        fecha_hora=cita.fecha_hora,
+        fecha_hora=fecha_hora,
         origen=origen,
         precio_total=_calcular_precio_total(servicios),
         servicios=servicios
