@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 
 from .database import get_db, engine
 from . import models
@@ -38,6 +38,73 @@ def _obtener_servicios(db: Session, servicios_ids: list[str]) -> list[models.Ser
 def _calcular_precio_total(servicios: list[models.Servicio]) -> float:
     """Calcula el precio total de una cita sumando los precios de sus servicios."""
     return sum(servicio.precio for servicio in servicios)
+
+
+def _calcular_duracion_total(servicios: list[models.Servicio]) -> int:
+    """Calcula la duración total de una cita sumando las duraciones de sus servicios."""
+    return sum(servicio.duracion_minutos for servicio in servicios)
+
+
+def _hay_solapamiento(
+    db: Session,
+    inicio: datetime,
+    duracion_minutos: int,
+    excluir_id: str | None = None,
+) -> bool:
+    """Indica si existe una cita activa cuyo intervalo se solapa con el propuesto.
+
+    Una cita ocupa el intervalo [inicio, inicio + duración_total). Dos citas se solapan si
+    (inicio_nuevo < fin_existente) Y (inicio_existente < fin_nuevo). El intervalo es abierto por
+    la derecha: una cita que termina a las 10:30 no bloquea otra que empiece a las 10:30.
+
+    Solo se consideran las citas activas (pendiente o confirmada): las canceladas y terminadas
+    liberan el hueco.
+    """
+    fin = inicio + timedelta(minutes=duracion_minutos)
+
+    candidatas = db.query(models.Cita).options(
+        selectinload(models.Cita.servicios)
+    ).filter(models.Cita.estado.in_(("pendiente", "confirmada"))).all()
+
+    for cita in candidatas:
+        # Al actualizar una cita, la propia no debe contarse como solapamiento consigo misma
+        if excluir_id is not None and cita.id == excluir_id:
+            continue
+
+        inicio_existente = cita.fecha_hora
+        fin_existente = inicio_existente + timedelta(
+            minutes=_calcular_duracion_total(cita.servicios)
+        )
+
+        if inicio < fin_existente and inicio_existente < fin:
+            return True
+
+    return False
+
+
+def _normalizar_naive(fecha_hora: datetime) -> datetime:
+    """Convierte un datetime con zona horaria a naive (UTC local), para poder compararlo.
+
+    Las citas se almacenan naive en la base de datos. Comparar un datetime aware contra uno naive
+    lanza TypeError, por lo que se normaliza siempre antes de comparar o almacenar.
+    """
+    if fecha_hora.tzinfo is not None:
+        return fecha_hora.astimezone().replace(tzinfo=None)
+    return fecha_hora
+
+
+def _a_inicio_del_dia(fecha: datetime | date) -> datetime:
+    """Convierte una fecha en el instante inicial de ese día (00:00:00)."""
+    if isinstance(fecha, datetime):
+        return _normalizar_naive(fecha)
+    return datetime.combine(fecha, time.min)
+
+
+def _a_fin_del_dia(fecha: datetime | date) -> datetime:
+    """Convierte una fecha en el instante final de ese día (23:59:59)."""
+    if isinstance(fecha, datetime):
+        return _normalizar_naive(fecha)
+    return datetime.combine(fecha, time.max)
 
 
 @app.get("/")
