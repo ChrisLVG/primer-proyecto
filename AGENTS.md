@@ -43,11 +43,26 @@
 - `GET|POST /servicios/`, `PATCH|DELETE /servicios/{servicio_id}`
 - `GET|POST /citas/`, `PATCH|DELETE /citas/{cita_id}`
 - `GET /citas/?origen=usuario|barbero`: filtra las citas por origen. Sin el parámetro devuelve todas. Un valor distinto de esos dos da `400`.
+- `GET /citas/?fecha_desde=&fecha_hasta=`: filtra por rango de fechas. Se aceptan `YYYY-MM-DD` (cubre el día completo) o `YYYY-MM-DDTHH:MM:SS` (instante exacto). Si solo se envía uno de los dos, se filtra ese día completo. Rango invertido da `400`.
+- `GET /citas/?estado=pendiente|confirmada|cancelada|terminada`: filtra por estado. Cualquier otro valor da `400`.
+- `GET /citas/?usuario_id=<id>`: filtra por usuario. Un usuario inexistente da `400`; uno válido sin citas devuelve `[]`.
+- `GET /citas/?limit=&offset=`: paginación (`limit` 1-500, default 100; `offset` ≥ 0, default 0). Fuera de rango da `422`.
+- Todos los filtros de `GET /citas/` son opcionales y se combinan con AND. El orden es `fecha_hora ASC, id ASC` (el `id` desempata para que la paginación sea estable).
 - Los borrados de usuario/servicio con citas asociadas devuelven `409`.
 
-## Tarea pendiente: solapamiento de horarios
+## Solapamiento de horarios (implementado)
 
-Con varios servicios, una cita ocupa la **suma** de las duraciones (Corte 30 min + Barba 20 min = 50 min). Dos citas a las 10:00 no se solapan, pero una a las 10:00 y otra a las 10:30 **sí**. La validación actual compara igualdad exacta de `fecha_hora`, lo que ya no basta: hay que comparar **intervalos** `[inicio, inicio + duración_total)` contra los de las demás citas. Pendiente de implementar.
+- Una cita ocupa el intervalo `[inicio, inicio + suma de duraciones)`. Dos citas se solapan si `(inicio_nuevo < fin_existente) Y (inicio_existente < fin_nuevo)`.
+- Se valida al **crear** y al **actualizar** una cita. Al actualizar, la propia cita se excluye de la comparación.
+- La duración total se **calcula en memoria** sumando `duracion_minutos` de los servicios; no se almacena en la tabla `citas`.
+- Solo bloquean las citas **activas** (`pendiente` o `confirmada`). Las `cancelada` y `terminada` liberan el hueco.
+- El intervalo es **abierto por la derecha**: una cita que termina a las 10:30 no bloquea otra que empiece a las 10:30.
+- Solo se valida si la cita cambia de **fecha** o de **servicios**. Un cambio de `estado` no altera su intervalo, así que no se comprueba.
+- **Aceptación de riesgo:** si cambia la duración de un servicio, las citas existentes **no** se revalidan (el precio sí se recalcula). Las citas ya creadas conservan su validez; solo las nuevas usan la nueva duración.
+
+## Estados de cita
+
+Los cuatro valores válidos son `pendiente`, `confirmada`, `cancelada` y `terminada`. Se validan **manualmente en el endpoint** para devolver `400` (un `Literal` de Pydantic devolvería `422`). `terminada` se marca manualmente vía `PATCH /citas/{id}`; no hay automatismo por fecha.
 
 ## Base de datos y esquema
 
@@ -55,6 +70,7 @@ Con varios servicios, una cita ocupa la **suma** de las duraciones (Corte 30 min
 - `database.py` define la URL como `sqlite:///./src/primer_proyecto/citas_barberia.db`, **relativa al CWD**: arrancar desde otro directorio crea una segunda base vacía.
 - Los `ondelete="CASCADE"` no surten efecto en SQLite salvo que se active `PRAGMA foreign_keys=ON`, que SQLAlchemy no emite por defecto.
 - `fastapi.testclient.TestClient` no funciona (starlette 1.6.0 exige `httpx2`, no instalado). Verifica los cambios arrancando uvicorn y consultando los endpoints.
+- **Gotcha de Pydantic en los query params de fecha:** la anotación debe ser `date | datetime` (en ese orden). Con `datetime | date`, Pydantic parsea `"2026-12-01"` como `datetime` a medianoche y se pierde la distinción entre "fecha sin hora" (día completo) e "instante exacto" que exige la API.
 
 ## Convenciones de codigo y estilo
 
