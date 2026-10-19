@@ -1,6 +1,6 @@
 # Tareas de desarrollo: 001 — Filtrar y listar citas
 
-**Estado:** T1-T6 completadas. T7 (verificación) en curso.
+**Estado:** ✅ Todas las tareas completadas. Verificación final: 20/20 criterios de aceptación.
 
 ## Resumen de dependencias
 
@@ -364,6 +364,8 @@ Actualizar `AGENTS.md` y `memory.md` para reflejar los cambios en el contrato de
 ---
 
 ## T7 — Verificación por HTTP real
+
+**Estado:** ✅ Completada — 20/20 criterios de aceptación, sin ningún 500
 
 **Dependencias:** T1, T2, T3, T4, T5 (se ejecuta después de toda la implementación).
 
