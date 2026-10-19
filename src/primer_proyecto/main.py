@@ -443,16 +443,23 @@ def actualizar_cita(cita_id: str, cita: schemas.CitaUpdate, db: Session = Depend
     if not existing_cita:
         raise HTTPException(status_code=404, detail="La cita no está registrada.")
 
-    # Si se envía el conjunto de servicios, se reemplaza por completo y se recalcula el precio total
-    if cita.servicios_ids is not None:
-        servicios = _obtener_servicios(db, cita.servicios_ids)
-        existing_cita.servicios = servicios
-        existing_cita.precio_total = _calcular_precio_total(servicios)
+    # El estado solo admite los cuatro valores previstos; se valida aquí para devolver 400
+    # en lugar del 422 que generaría el esquema.
+    if cita.estado is not None and cita.estado not in ("pendiente", "confirmada", "cancelada", "terminada"):
+        raise HTTPException(
+            status_code=400,
+            detail="El estado debe ser uno de: pendiente, confirmada, cancelada, terminada."
+        )
+
+    # Determinamos la fecha final de la cita: la actual o la nueva, ya normalizada a naive.
+    fecha_final = existing_cita.fecha_hora
 
     if cita.fecha_hora is not None:
+        fecha_hora = _normalizar_naive(cita.fecha_hora)
+
         # Verificamos si la fecha y hora de la cita ya está ocupada por otra cita
         existing_cita_fecha = db.query(models.Cita).filter(
-            models.Cita.fecha_hora == cita.fecha_hora, models.Cita.id != cita_id
+            models.Cita.fecha_hora == fecha_hora, models.Cita.id != cita_id
         ).first()
         if existing_cita_fecha:
             raise HTTPException(status_code=400, detail="La fecha y hora de la cita ya está ocupada por otra cita.")
@@ -460,23 +467,39 @@ def actualizar_cita(cita_id: str, cita: schemas.CitaUpdate, db: Session = Depend
         # Verificamos si la fecha y hora de la cita coincide con la de otra cita del mismo usuario
         existing_cita_usuario = db.query(models.Cita).filter(
             models.Cita.usuario_id == existing_cita.usuario_id,
-            models.Cita.fecha_hora == cita.fecha_hora,
+            models.Cita.fecha_hora == fecha_hora,
             models.Cita.id != cita_id
         ).first()
         if existing_cita_usuario:
             raise HTTPException(status_code=400, detail="La fecha y hora de la cita ya está ocupada por otra cita del mismo usuario.")
 
-        # Verificamos si la fecha y hora de la cita es anterior a la fecha y hora actual.
-        # Se normaliza a naive porque el cliente puede enviar un timestamp con zona horaria y
-        # compararlo contra datetime.now() (naive) lanza TypeError.
-        fecha_hora = cita.fecha_hora
-        if fecha_hora.tzinfo is not None:
-            fecha_hora = fecha_hora.astimezone().replace(tzinfo=None)
-
+        # Verificamos si la fecha y hora de la cita es anterior a la fecha y hora actual
         if fecha_hora < datetime.now():
             raise HTTPException(status_code=400, detail="La fecha y hora de la cita no puede ser anterior a la fecha y hora actual.")
 
-        existing_cita.fecha_hora = fecha_hora
+        fecha_final = fecha_hora
+
+    # Si se envía el conjunto de servicios, se reemplaza por completo y se recalcula el precio total
+    servicios_finales = existing_cita.servicios
+
+    if cita.servicios_ids is not None:
+        servicios = _obtener_servicios(db, cita.servicios_ids)
+        servicios_finales = servicios
+        existing_cita.servicios = servicios
+        existing_cita.precio_total = _calcular_precio_total(servicios)
+
+    # Verificamos el solapamiento con la combinación final de fecha y servicios. Solo se comprueba
+    # si la cita cambia de fecha o de servicios; un cambio de estado no altera su intervalo.
+    if cita.fecha_hora is not None or cita.servicios_ids is not None:
+        duracion_total = _calcular_duracion_total(servicios_finales)
+
+        if _hay_solapamiento(db, fecha_final, duracion_total, excluir_id=cita_id):
+            # Descartamos los cambios ya aplicados en memoria para no dejar la sesión inconsistente
+            db.rollback()
+            raise HTTPException(status_code=400, detail="La cita se solapa con otra cita existente.")
+
+    if cita.fecha_hora is not None:
+        existing_cita.fecha_hora = fecha_final
 
     if cita.estado is not None:
         existing_cita.estado = cita.estado
