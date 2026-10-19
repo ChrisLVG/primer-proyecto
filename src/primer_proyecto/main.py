@@ -244,6 +244,8 @@ def crear_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
     # El origen por defecto es 'usuario'; solo se marca como 'barbero' si viene explícito
     if cita.origen is None:
         origen = db.query(models.Usuario).get(cita.usuario_id).rol
+    else:
+        origen = cita.origen
     if origen not in ("usuario", "barbero"):
         raise HTTPException(status_code=400, detail="El origen debe ser 'usuario' o 'barbero'.")
 

@@ -59,7 +59,7 @@ class CitaCreate(BaseModel):
     usuario_id: str = Field(..., description="El ID del usuario que agendas la cita")
     servicios_ids: list[str] = Field(..., min_length=1, description="Los IDs de los servicios incluidos en la cita")
     fecha_hora: datetime = Field(..., description="La fecha y hora de la cita")
-    origen: Optional[str] | None
+    origen: Optional[str] | None= None  # Puede ser 'usuario' o 'barbero'; si no se envía, se determina automáticamente
 
 
 class CitaUpdate(BaseModel):

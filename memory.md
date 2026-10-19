@@ -13,6 +13,7 @@ CRUD completo de usuarios, servicios y citas, verificado con 34/34 pruebas. Pend
 - `create_all()` solo crea tablas faltantes; sin Alembic, los cambios de esquema requieren regenerar la BD o migrar SQL a mano.
 - Un `AttributeError` en un join pasó inadvertido fuera del `try/except`; comprobar `status_code` en pruebas, no solo los datos.
 - `TestClient` no sirve con Starlette 1.6.0; las pruebas se ejecutan levantando uvicorn y llamando por HTTP.
+- SQLAlchemy se usa en modelos y sesiones de BD; declararlo como dependencia directa y mantener `uv.lock` sincronizado.
 
 ## Decisiones de arquitectura
 

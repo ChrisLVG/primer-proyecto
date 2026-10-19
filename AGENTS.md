@@ -73,12 +73,13 @@ Con varios servicios, una cita ocupa la **suma** de las duraciones (Corte 30 min
 - NUNCA intentes leer, inspeccionar o modificar directorios o archivos ignorados (`.venv/`, `__pycache__/`, archivos `.db` o `.lock`).
 - NUNCA ejecutes comandos para instalar librerías (`uv add`, `pip install`) ni modifiques `pyproject.toml` sin aprobación previa del usuario.
 - NUNCA alteres los modelos ORM de SQLAlchemy (`models.py`) ni cambies la estructura de las tablas sin la aprobación previa del usuario y confirmando los requerimientos de la base de datos.
-- NUNCA ejecutes scripts o comandos que borren o reinicien los datos de la base de datos local (`citas_uñas.db`) a menos que el usuario lo solicite explícitamente.
+- NUNCA ejecutes scripts o comandos que borren o reinicien los datos de la base de datos local (`citas_barberia.db`) a menos que el usuario lo solicite explícitamente.
 - NUNCA reescribas o elimines funciones existentes que estén operativas; realiza únicamente cambios incrementales y modularizados.
 - NUNCA dupliques lógica de negocio o utilidades que ya existan en otros archivos del proyecto.
 - NUNCA ejecutes comandos destructivos en la terminal (ej. `rm`, `del`, detención de procesos globales) sin la aprobación previa del usuario.
 
-## Flujo de trabajo y memoria
+## Flujo de trabajo, memoria y SDD
 
+- Al planificar o especificar nuevas funcionalidades, consulta obligatoriamente `docs/constitution.md`
 - Antes de iniciar una tarea, lee `memory.md` para conocer el estado actual y las decisiones previas.
 - Al finalizar cada tarea, actualiza `memory.md` resumiendo las modificaciones realizadas, aprendizajes y próximos pasos.
