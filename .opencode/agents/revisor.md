@@ -47,7 +47,7 @@ Solo detecta: no propongas soluciones.
 ## Si te piden validar la implementación (validacion)
 
 1. Lee spec.md, plan.md y tasks.md, y los cambios (usa git diff).
-2. Ejecuta `uv run pytest`.
+2. Ejecuta - `uv run uvicorn src.primer_proyecto.main:app --reload --no-access-log` o `uv run primer-proyecto`: Alternativa al anterior, definida en `[project.scripts]`; usa `primer_proyecto.main` (el atributo `main` de `__init__.py`). Si mueves `main()`, actualiza `pyproject.toml.
 3. Recorre la spec RF por RF: qué test lo cubre y su resultado.
 4. Comprueba la aplicacion para verificar tecnicamente que no existan errores en consola ni en la API.
 5. Comprueba los criterios de finalización y los principios inviolables de docs/constitution.md.

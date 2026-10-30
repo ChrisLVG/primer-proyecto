@@ -13,5 +13,5 @@ Lee `docs/constitution.md`, `specs/$ARGUMENTS/spec.md`, `specs/$ARGUMENTS/plan.m
 - Implementar tareas de desarrollo en el orden secuencial definido en `specs/$ARGUMENTS/tasks.md`, respetando las dependencias entre ellas.
 - Cada tarea debe implementarse en un commit independiente, con un mensaje de commit que describa la tarea y el RF que cubre.
 - primero los tests (en rojo) y después el código.
-- Una vez que se termine de implementar una tarea, realiza pruebas con `uv run pytest` para verificar que la funcionalidad cumple con los criterios de aceptación definidos en la especificación técnica.
+- Una vez que se termine de implementar una tarea, realiza pruebas con - `uv run uvicorn src.primer_proyecto.main:app --reload --no-access-log` o `uv run primer-proyecto`: Alternativa al anterior, definida en `[project.scripts]`; usa `primer_proyecto.main` (el atributo `main` de `__init__.py`). Si mueves `main()`, actualiza `pyproject.toml para verificar que la funcionalidad cumple con los criterios de aceptación definidos en la especificación técnica.
 - Marca cada tarea como completada en `specs/$ARGUMENTS/tasks.md` una vez que haya sido implementada y probada y actualiza la memoria persistente en `memory.md`.
