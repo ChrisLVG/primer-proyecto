@@ -24,6 +24,7 @@
 
 ## Comandos principales
 
+- `uv run pytest`: Ejecuta todos los archivos de prueba. Usalo para los test
 - `uv run uvicorn src.primer_proyecto.main:app --reload --no-access-log`: Iniciar el servidor de desarrollo. Requiere CWD en la raíz del repo (la ruta de SQLite es relativa).
 - `uv run primer-proyecto`: Alternativa al anterior, definida en `[project.scripts]`; usa `primer_proyecto.main` (el atributo `main` de `__init__.py`). Si mueves `main()`, actualiza `pyproject.toml`.
 

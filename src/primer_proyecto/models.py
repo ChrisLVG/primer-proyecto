@@ -17,9 +17,14 @@ class Usuario(Base):
     # 'usuario' (cliente que agenda desde el sitio) o 'barbero' (personal que agenda por teléfono o en el mostrador)
     rol = Column(String, nullable=False, default="usuario")
 
+    # Contraseña hasheada con bcrypt (RF-1.2). Nula para usuarios existentes
+    # creados antes de la feature de autenticación.
+    contrasena_hash = Column(String, nullable=True)
+
     # SQLAlchemy une las clases lógicamente para permitir la navegación de objetos en Python.
     # 'back_populates' se conecta con la propiedad de la clase destino.
     citas = relationship("Cita", back_populates="usuario")
+    sesiones = relationship("Sesion", back_populates="usuario")
 
 
 class Servicio(Base):
@@ -71,3 +76,22 @@ class CitaServicio(Base):
     # La clave primaria compuesta impide que un mismo servicio se repita dentro de la misma cita.
     cita_id = Column(String, ForeignKey("citas.id"), primary_key=True)
     servicio_id = Column(String, ForeignKey("servicios.id"), primary_key=True)
+
+
+class Sesion(Base):
+    """Tabla de sesiones de autenticación (RF-2.2).
+
+    Almacena el hash SHA-256 del token opaco, el usuario propietario,
+    la fecha de creación y la fecha de expiración (TTL de 24 horas).
+    """
+
+    __tablename__ = "sesiones"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    token_hash = Column(String, nullable=False, index=True)
+    usuario_id = Column(String, ForeignKey("usuarios.id"), nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+
+    # Relación con el usuario propietario de la sesión.
+    usuario = relationship("Usuario", back_populates="sesiones")

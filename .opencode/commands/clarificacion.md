@@ -9,6 +9,6 @@ Revisa la especificación técnica de la nueva funcionalidad en `specs/$ARGUMENT
 
 ## Pasos a seguir
 
-- Identifica ambiguedades, inconsistencias o contradicciones en la especificación, lagunas logicas o requisitos poco claros o imcompletos.
+- Identifica ambiguedades, inconsistencias o contradicciones en la especificación, lagunas logicas o requisitos poco claros o imcompletos, casos limites no cubiertos y conflictos con docs/constitution.md.
 - Enumera los hallazgos encontrados y propon como corregirlos o aclararlos.
 - Tras mi confirmacion, redacta la versión final de la especificación técnica en `specs/$ARGUMENTS/spec.md` incorporando las correcciones y aclaraciones acordadas.

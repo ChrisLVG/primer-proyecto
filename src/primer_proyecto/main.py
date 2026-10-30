@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+import bcrypt
+from fastapi import FastAPI, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 from datetime import date, datetime, time, timedelta
@@ -520,3 +521,50 @@ def eliminar_cita(cita_id: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Cita eliminada correctamente"}
+
+
+# --- Autenticación ---
+
+@app.post(
+    "/auth/register",
+    response_model=schemas.UsuarioResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def registrar_usuario(registro: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+    """Registra un nuevo usuario público con rol `usuario` (RF-1).
+
+    Es un endpoint público: no requiere token de autenticación. La contraseña se hashea con
+    bcrypt antes de almacenarla (RF-1.2) y nunca se devuelve en la respuesta, ya que
+    `UsuarioResponse` no la incluye. Si el correo ya está registrado se devuelve 400
+    (RF-1.3); los errores de validación del esquema se devuelven como 422 por Pydantic.
+    """
+    # Validamos que el correo no esté ya registrado (RF-1.3)
+    existing_usuario = (
+        db.query(models.Usuario)
+        .filter(models.Usuario.correo == registro.correo)
+        .first()
+    )
+    if existing_usuario:
+        raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+
+    # Hasheamos la contraseña con bcrypt antes de almacenarla (RF-1.2).
+    # bcrypt impone un límite de 72 bytes, ya validado por el esquema de entrada.
+    contrasena_hash = bcrypt.hashpw(
+        registro.contrasena.encode("utf-8"), bcrypt.gensalt()
+    ).decode("utf-8")
+
+    try:
+        nuevo_usuario = models.Usuario(
+            nombre=registro.nombre,
+            numero=registro.numero,
+            correo=registro.correo,
+            contrasena_hash=contrasena_hash,
+            rol="usuario",  # Rol por defecto al registrarse (RF-1.5)
+        )
+        db.add(nuevo_usuario)
+        db.commit()
+        db.refresh(nuevo_usuario)
+        return nuevo_usuario
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="El correo ya está registrado.")

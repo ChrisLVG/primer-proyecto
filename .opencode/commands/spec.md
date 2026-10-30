@@ -11,5 +11,5 @@ Antes de escribir codigo, vamos a redactar la especificacion tecnica para la nue
 
 - Lee `docs/constitution.md` para conocer los principios innegociables del proyecto.
 - Pideme una descripción de la nueva funcionalidad que vamos a implementar.
-- Hazme las preguntas de clarificacion necesarias para aclarar los requisitos, limites y casos borde.
-- Una vez que tengamos todos los detalles, redacta la especificación técnica en `specs/$ARGUMENTS/spec.md` con: Objetivo y contexto, Requisitos funcionales, Restricciones y lo que no incluye, casos borde y manejo de errores, y criterios de aceptación y verificación.
+- Hazme preguntas DE UNA EN UNA  de clarificacion necesarias para aclarar los requisitos, limites y casos borde.
+- Una vez que tengamos todos los detalles, redacta la especificación técnica en `specs/$ARGUMENTS/spec.md` con: Objetivo y contexto, usuarios, historias de usuario, Requisitos funcionales, requisitos no funcionales, Restricciones y lo que no incluye, casos borde y manejo de errores, criterios de aceptación y verificación y dudas abiertas marcadas como[NECESITA ACLARACION].
