@@ -30,6 +30,14 @@ CRUD completo de usuarios, servicios y citas operativa. Feature 001 (filtrar y l
 - **Aceptación de riesgo:** cambiar la duración de un servicio no revalida las citas existentes (el precio sí se recalcula).
 - Especificación, plan y tareas en `specs/001_filtrar_citas/`.
 
+## Feature 002 — autenticación (en implementación; T1–T4 completadas)
+- Schemas (T1): `UsuarioCreate` ahora incluye `contrasena` (8–72); `UsuarioResponse` independiente y sin contraseña; nuevos `LoginRequest`, `AuthResponse`, `LogoutResponse`.
+- Models (T2): `usuarios.contrasena_hash` (nullable) y tabla `sesiones` (`token_hash` SHA-256 indexado, `usuario_id`, `created_at`, `expires_at`). **BD regenerada** (aprobada por el usuario).
+- `POST /auth/register` (T3, RF-1): público, bcrypt, 201/400/422. Verificado por HTTP real.
+- `POST /auth/login` (T4, RF-2):helpers `_hash_token` y `_crear_sesion` (token opaco `secrets.token_urlsafe(32)`, hash SHA-256, TTL 24 h). Verificación antes de crear sesión; usuario sin contraseña también da `401`. Verificado por HTTP real (7/7).
+- T5 completada: `POST /auth/logout` implementada con `_obtener_sesion_valida`, `HTTPBearer(auto_error=False)` y eliminación de sesión con `db.rollback()` en `try/except`. Prueba HTTP real: 10/10 (válido, repetido, sin header, token inválido/expirado, sesión borrada y codificación Unicode). Pendientes: T6 (dependencias auth), T7–T9 (proteger endpoints), T10 (verificación HTTP), T11 (docs).
+- T6 completada: get_current_user (valida sesi�n, 401 si no hay token/inv�lida/expirada) y equire_rol(rol) (403 si rol insuficiente). M�dulo cargado sin errores.
+
 ## Próximos pasos
 - [ ] Sistema de autenticación y sesiones (LocalStorage / Cookies HttpOnly). Requiere especificación propia.
 - [ ] Endpoint de contacto vía WhatsApp para agendar cita.

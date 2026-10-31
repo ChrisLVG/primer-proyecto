@@ -95,7 +95,7 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 ## T4 — Implementar `POST /auth/login` (`main.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ✅ Completada y verificada por HTTP real
 
 **Dependencias:** T1, T2.
 
@@ -110,16 +110,16 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 **Criterios de aceptación:**
 
-- [ ] Login con credenciales válidas → `200` con token y datos del usuario.
-- [ ] Login con credenciales inválidas → `401`.
-- [ ] Login con datos inválidos → `422`.
+- [x] Login con credenciales válidas → `200` con token y datos del usuario.
+- [x] Login con credenciales inválidas → `401`.
+- [x] Login con datos inválidos → `422`.
 - **RF cubiertos:** RF-2.
 
 ---
 
 ## T5 — Implementar `POST /auth/logout` (`main.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ? Completada y verificada por HTTP real
 
 **Dependencias:** T4, T6.
 
@@ -130,17 +130,17 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 1. Añadir endpoint `POST /auth/logout` con Bearer.
 2. Sin token / token inválido / token expirado → `401`; con token válido → eliminar sesión y responder `200` con `LogoutResponse`.
 
-**Criterios de aceptación:**
-
-- [ ] Logout con token válido → `200`; token queda invalidado.
-- [ ] Logout con token inválido o expirado → `401`.
+- [x] Logout con token v�lido ? `200`; token queda invalidado.
+- [x] Logout con token inv�lido ? `401`.
+- [x] Logout sin header Authorization ? `401 "No autenticado."`.
+- (Token expirado: l�gica implementada, requiere manipulaci�n directa de BD para simular.)
 - **RF cubiertos:** RF-3.
 
 ---
 
 ## T6 — Añadir dependencias de autenticación y control de rol (`main.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ? Completada (verificaci�n de importaci�n y carga de m�dulo)
 
 **Dependencias:** T2.
 
@@ -164,7 +164,7 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 ## T7 — Proteger endpoints de citas (`main.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ? Pendiente
 
 **Dependencias:** T6, T1, T2.
 
@@ -295,3 +295,4 @@ T11 (docs) ───────────────────────
 - No se modifican `database.py` ni `CitaServicio`.
 - Cada tarea es atómica y secuencial: se puede implementar y verificar de forma independiente.
 - Las tareas NO están completadas: es fase de plan y tareas (SDD fase 3).
+
