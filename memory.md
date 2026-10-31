@@ -3,6 +3,7 @@
 
 ## Estado actual
 CRUD completo de usuarios, servicios y citas operativa. Feature 001 (filtrar y listar citas) implementada y verificada por HTTP real. Pendiente: autenticación y frontend.
+- Spec 003 completada: borrar servicio elimina citas que quedarían vacías y recalcula precios restantes; borrar usuario elimina citas y sesiones. Pruebas HTTP: T1 7/7, T2 5/5, regresión final 12/12 en SQLite en memoria. Documentación sincronizada; sin cambios de esquema ni datos locales.
 
 ## Aprendizajes y hallazgos
 - La relación cita-servicios es **N:M**: tabla intermedia `cita_servicio` con clave primaria compuesta. El modelo 1:N anterior obligaba a duplicar citas.

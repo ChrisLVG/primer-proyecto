@@ -42,8 +42,8 @@ Si la petición es un cambio pequeño que no merece una spec, sugiere usar /feat
 1. **Spec**: Pidele al usuario un nombre en el caso de que quiera añadir una nueva funcionalidad despues pide a @planificador que redacte specs/(nombre de la spec dada por el usuario)/spec.md. Si devuelve preguntas, házselas al usuario de una en una y vuelve a llamarle con las respuestas.
 2. **Clarificación**: pide a @revisor que revise la spec(solo detecta). Enseña el resultado al usuario; si hay problemas, @planificador corrige la spec rectificando los errores detectados por @revisor. PARA hasta que el usuario apruebe la spec.
 3. **Plan y tareas**: pide a @planificador que genere plan.md y con ese plan que genere tasks.md de la spec aprobada. Enseña un resumen y PARA hasta que el usuario los apruebe.
-4. **Implementación**: llama a @implementador UNA vez por tarea (T1, T2…), en orden, avisa al usuario cuando @implementador de por finalizada la tarea con sus test y muestra los resultados, espera a la confirmacion del usuario para proseguir con la siguiente tarea.
-5. **Validación**: pide a @revisor que valide la spec RF por RF.
+4. **Implementación**: llama a @implementador para resolver las tareas de specs/(nombre de la spec dada por el usuario)/task.md UNA vez por tarea (T1, T2…), en orden , avisa al usuario cuando @implementador de por finalizada la tarea con sus test y muestra los resultados, espera a la confirmacion del usuario para proseguir con la siguiente tarea.
+5. **Validación**: pide a @revisor que valide la spec de specs/(nombre de la spec dada por el usuario)/spec.md RF por RF.
 6. **Correcciones**: si @revisor dice CAMBIOS NECESARIOS, vuelve a @implementador con la lista exacta y después otra vez a @revisor. Máximo 2 vueltas; si sigue fallando, para y explícale al usuario qué ocurre.
 7. **Cierre**: resume qué se ha hecho, el veredicto de @revisor y lo pendiente.
 

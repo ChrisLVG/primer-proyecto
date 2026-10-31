@@ -48,7 +48,7 @@
 - `GET /citas/?usuario_id=<id>`: filtra por usuario. Un usuario inexistente da `400`; uno válido sin citas devuelve `[]`.
 - `GET /citas/?limit=&offset=`: paginación (`limit` 1-500, default 100; `offset` ≥ 0, default 0). Fuera de rango da `422`.
 - Todos los filtros de `GET /citas/` son opcionales y se combinan con AND. El orden es `fecha_hora ASC, id ASC` (el `id` desempata para que la paginación sea estable).
-- Los borrados de usuario/servicio con citas asociadas devuelven `409`.
+- Borrar un usuario elimina sus citas y sesiones; borrar un servicio elimina las citas que quedarían sin servicios y recalcula los precios de las restantes.
 
 ## Solapamiento de horarios (implementado)
 

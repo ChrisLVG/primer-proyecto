@@ -63,13 +63,14 @@
 9. Token expirado al usarlo → `401` "La sesión ha expirado.".
 10. Token revocado (logout) → `401` "Sesión no válida.".
 11. Rol insuficiente → `403`.
-12. Borrado de usuario/servicio con citas → `409` (constitución I).
-13. `PATCH /usuarios/{id}` con rol inválido → `400` "El rol debe ser 'usuario' o 'barbero'.".
-14. Crear cita con `usuario_id` inexistente → `400` "El usuario no está registrado.".
-15. Crear cita con origen inválido → `400` "El origen debe ser 'usuario' o 'barbero'.".
-16. Usuario autenticado con origen que no corresponda a su rol → `400`.
-17. Usuario autenticado con `usuario_id` ajeno en `POST /citas/` → `403`.
-18. Token expirado simulado (sin esperar las 24 h) → `401` en endpoint protegido.
+12. Borrado de servicio asociado → `200`; elimina las citas que quedarían sin servicios y actualiza las restantes.
+13. Borrado de usuario con citas o sesiones → `200`; elimina también sus datos dependientes.
+14. `PATCH /usuarios/{id}` con rol inválido → `400` "El rol debe ser 'usuario' o 'barbero'.".
+15. Crear cita con `usuario_id` inexistente → `400` "El usuario no está registrado.".
+16. Crear cita con origen inválido → `400` "El origen debe ser 'usuario' o 'barbero'.".
+17. Usuario autenticado con origen que no corresponda a su rol → `400`.
+18. Usuario autenticado con `usuario_id` ajeno en `POST /citas/` → `403`.
+19. Token expirado simulado (sin esperar las 24 h) → `401` en endpoint protegido.
 19. Solapamiento / cita duplicada / servicios no registrados → `400` (spec 001).
 
 ## 4. Posibles riesgos de implementación

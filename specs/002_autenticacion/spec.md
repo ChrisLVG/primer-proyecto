@@ -68,7 +68,7 @@ Formato EARS: cada requisito expresa una afirmación atómica ("El sistema debe 
 | `GET /servicios/` | GET | Público | — | RF-5.1 (solo lectura pública). |
 | `POST /servicios/` | POST | Barbero | — | RF-5.1. |
 | `PATCH /servicios/{servicio_id}` | PATCH | Barbero | — | RF-5.1. |
-| `DELETE /servicios/{servicio_id}` | DELETE | Barbero | — | RF-5.1. Devuelve 409 si el servicio tiene citas (constitución I). |
+| `DELETE /servicios/{servicio_id}` | DELETE | Barbero | — | RF-5.1. Elimina las citas que quedarían sin servicios y recalcula el precio de las citas restantes. |
 | `GET /citas/` | GET | Autenticado | Barbero → todas; Usuario → solo las propias | RF-4.2, RF-4.3, RF-4.6. |
 | `POST /citas/` | POST | Autenticado | Barbero → cliente señalado vía `usuario_id`; Usuario → propio | RF-4.4, RF-4.5. Contrato body en §3.3. |
 | `PATCH /citas/{cita_id}` | PATCH | Autenticado | Barbero → cualquier; Usuario → solo las propias | RF-4.3. |
@@ -76,7 +76,7 @@ Formato EARS: cada requisito expresa una afirmación atómica ("El sistema debe 
 | `GET /usuarios/` | GET | Autenticado | Barbero → todos; Usuario → solo el propio | RF-4.7. |
 | `POST /usuarios/` | POST | Barbero | — | Alta de usuario con rol `usuario`; el registro público de clientes se centraliza en `POST /auth/register` (RF-1). |
 | `PATCH /usuarios/{usuario_id}` | PATCH | Autenticado | Barbero → cualquier; Usuario → solo el propio (sin gestión de rol) | RF-4.7. |
-| `DELETE /usuarios/{usuario_id}` | DELETE | Barbero | — | Baja. Devuelve 409 si el usuario tiene citas (constitución I). Solo barbero; el auto-borrado no está contemplado. |
+| `DELETE /usuarios/{usuario_id}` | DELETE | Barbero | — | Baja; elimina también las citas y sesiones asociadas. Solo barbero; el auto-borrado no está contemplado. |
 
 ## 3. Contrato de API (Constitución IV)
 
@@ -188,7 +188,8 @@ Resumen de response y status codes:
 | Token expirado al usarlo | `401` "La sesión ha expirado." |
 | Token revocado (logout) | `401` "Sesión no válida." |
 | Rol insuficiente | `403` |
-| Borrado de usuario/servicio con citas | `409` (constitución I) |
+| Borrado de servicio asociado | `200`; elimina las citas que quedarían sin servicios y actualiza las restantes |
+| Borrado de usuario con citas o sesiones | `200`; elimina también sus citas y sesiones asociadas |
 | `PATCH /usuarios/{id}` con rol inválido | `400` "El rol debe ser 'usuario' o 'barbero'." |
 | Crear cita con `usuario_id` inexistente | `400` "El usuario no está registrado." |
 | Crear cita con origen inválido | `400` "El origen debe ser 'usuario' o 'barbero'." |

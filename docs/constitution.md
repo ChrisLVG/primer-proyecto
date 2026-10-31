@@ -1,13 +1,13 @@
 # Constitución del Proyecto: Sitio web de citas para barbería
 
-**Versión:** 1.0.0 (borrador)
+**Versión:** 1.1.0
 
 Principios innegociables del proyecto. Toda especificación, plan, tarea y cambio de código debe respetarlos. Si una especificación los contradice, se corrige la especificación o se enmienda esta constitución; nunca se ignora.
 
 ## I. El backend protege la integridad de los datos
 
 - Las reglas de negocio se validan siempre en la API; el frontend nunca es la única barrera.
-- Se respetan las claves foráneas: borrar un usuario o servicio con citas asociadas devuelve `409`.
+- Las eliminaciones preservan la integridad: borrar un usuario elimina sus citas y sesiones asociadas; borrar un servicio elimina sus asociaciones, también elimina las citas que quedarían sin servicios y recalcula el precio de las citas restantes.
 - `Cita.origen` es un snapshot: se escribe al crear la cita y no se recalcula después.
 - `Cita.precio_total` se recalcula en toda escritura que pueda dejarlo obsoleto (crear cita, cambiar sus servicios, cambiar el precio de un servicio).
 - Una cita ocupa el intervalo `[inicio, inicio + suma de duraciones)`, y dos citas no pueden solaparse.

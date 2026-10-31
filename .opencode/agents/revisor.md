@@ -13,7 +13,7 @@ permissions:
   resource: "*"
   effect: ask
 - action: shell
-  resource: "node --test*"
+  resource: "- `uv run uvicorn src.primer_proyecto.main:app --reload --no-access-log`"
   effect: allow
 - action: shell
   resource: "git diff*"
@@ -23,7 +23,7 @@ permissions:
   effect: allow
 - action: webfetch
   resource: "*"
-  effect: deny
+  effect: allow
 - action: subagent
   resource: "*"
   effect: deny

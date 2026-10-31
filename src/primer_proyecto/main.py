@@ -205,11 +205,32 @@ def eliminar_usuario(usuario_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="El usuario no está registrado.")
 
     try:
+        citas_ids = [
+            cita_id
+            for (cita_id,) in db.query(models.Cita.id).filter(
+                models.Cita.usuario_id == usuario_id
+            ).all()
+        ]
+        if citas_ids:
+            db.query(models.CitaServicio).filter(
+                models.CitaServicio.cita_id.in_(citas_ids)
+            ).delete(synchronize_session=False)
+            db.query(models.Cita).filter(
+                models.Cita.id.in_(citas_ids)
+            ).delete(synchronize_session=False)
+
+        db.query(models.Sesion).filter(
+            models.Sesion.usuario_id == usuario_id
+        ).delete(synchronize_session=False)
+
         db.delete(usuario_db)
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="El usuario tiene citas registradas y no puede eliminarse.")
+        raise HTTPException(
+            status_code=409,
+            detail="No se pudo eliminar el usuario debido a una relación existente.",
+        )
 
     return {"message": "Usuario eliminado correctamente"}
 
@@ -285,12 +306,33 @@ def eliminar_servicio(servicio_id: str, db: Session = Depends(get_db)):
     if not servicio_db:
         raise HTTPException(status_code=404, detail="El servicio no está registrado.")
 
+    citas_afectadas = db.query(models.Cita).join(
+        models.CitaServicio, models.CitaServicio.cita_id == models.Cita.id
+    ).options(
+        selectinload(models.Cita.servicios)
+    ).filter(models.CitaServicio.servicio_id == servicio_id).all()
+
     try:
+        for cita in citas_afectadas:
+            servicios_restantes = [
+                servicio for servicio in cita.servicios if servicio.id != servicio_id
+            ]
+
+            if not servicios_restantes:
+                db.delete(cita)
+                continue
+
+            cita.servicios = servicios_restantes
+            cita.precio_total = _calcular_precio_total(servicios_restantes)
+
         db.delete(servicio_db)
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="El servicio está asociado a citas y no puede eliminarse.")
+        raise HTTPException(
+            status_code=409,
+            detail="No se pudo eliminar el servicio debido a una relación existente.",
+        )
 
     return {"message": "Servicio eliminado correctamente"}
 

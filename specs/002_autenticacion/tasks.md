@@ -18,7 +18,7 @@ T11 (docs) ───────────────────────
 
 ## T1 — Actualizar esquemas Pydantic (`schemas.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ✅ Completada
 
 **Dependencias:** Ninguna (primera tarea).
 
@@ -49,7 +49,7 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 ## T2 — Añadir modelos ORM de contraseña y sesión (`models.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ✅ Completada
 
 **Dependencias:** Ninguna.
 
@@ -70,7 +70,7 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 ## T3 — Implementar `POST /auth/register` (`main.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ✅ Completada
 
 **Dependencias:** T1, T2.
 
