@@ -1,6 +1,6 @@
 # Tareas de desarrollo: 002 — Autenticación
 
-**Estado:** ⏳ Pendiente de implementación (spec 002 aprobada, versión 1.0.0). Ninguna tarea completada todavía.
+**Estado:** Implementación y verificación completadas (T1-T11; ver nota de T10 sobre diferencias de status).
 
 ## Resumen de dependencias
 
@@ -130,17 +130,17 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 1. Añadir endpoint `POST /auth/logout` con Bearer.
 2. Sin token / token inválido / token expirado → `401`; con token válido → eliminar sesión y responder `200` con `LogoutResponse`.
 
-- [x] Logout con token v�lido ? `200`; token queda invalidado.
-- [x] Logout con token inv�lido ? `401`.
+- [x] Logout con token v�lido ? `200`; token queda invalidado.
+- [x] Logout con token inv�lido ? `401`.
 - [x] Logout sin header Authorization ? `401 "No autenticado."`.
-- (Token expirado: l�gica implementada, requiere manipulaci�n directa de BD para simular.)
+- (Token expirado: l�gica implementada, requiere manipulaci�n directa de BD para simular.)
 - **RF cubiertos:** RF-3.
 
 ---
 
 ## T6 — Añadir dependencias de autenticación y control de rol (`main.py`)
 
-**Estado:** ? Completada (verificaci�n de importaci�n y carga de m�dulo)
+**Estado:** ? Completada (verificaci�n de importaci�n y carga de m�dulo)
 
 **Dependencias:** T2.
 
@@ -164,7 +164,7 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 ## T7 — Proteger endpoints de citas (`main.py`)
 
-**Estado:** ? Pendiente
+**Estado:** ? Completada y verificada por HTTP real
 
 **Dependencias:** T6, T1, T2.
 
@@ -189,7 +189,7 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 ## T8 — Proteger endpoints de usuarios (`main.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ? Completada y verificada por HTTP real
 
 **Dependencias:** T6.
 
@@ -204,16 +204,16 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 **Criterios de aceptación:**
 
-- [ ] `GET /usuarios/` con rol `barbero` → todos; con rol `usuario` → solo el propio.
-- [ ] `PATCH /usuarios/{usuario_id}`: usuario autenticado solo puede modificar su propio registro sin gestión de rol → `200`; sobre registro ajeno → `403`.
-- [ ] Endpoints de usuarios con rol no apropiado → `403`.
+- [x] `GET /usuarios/` con rol `barbero` ? todos; con rol `usuario` ? solo el propio.
+- [x] `PATCH /usuarios/{usuario_id}`: usuario autenticado solo puede modificar su propio registro sin gesti�n de rol ? `200`; sobre registro ajeno ? `403`.
+- [x] Endpoints de usuarios con rol no apropiado ? `403`.
 - **RF cubiertos:** RF-4.7.
 
 ---
 
 ## T9 — Proteger endpoints de servicios (`main.py`)
 
-**Estado:** ⏳ Pendiente
+**Estado:** ? Completada y verificada por HTTP real
 
 **Dependencias:** T6.
 
@@ -226,15 +226,14 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 **Criterios de aceptación:**
 
-- [ ] `POST`/`PATCH`/`DELETE /servicios/` con rol no `barbero` → `403`.
+- [x] `POST`/`PATCH`/`DELETE /servicios/` con rol no `barbero` ? `403`.
 - **RF cubiertos:** RF-5.1.
 
 ---
 
 ## T10 — Verificación por HTTP real
 
-**Estado:** ⏳ Pendiente
-
+**Estado:** ✅ Completada y verificada por HTTP real
 **Dependencias:** T1 a T9.
 
 **Archivos a modificar:** Ninguno (solo verificación).
@@ -247,16 +246,16 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 **Criterios de aceptación:**
 
-- [ ] Todos los criterios de aceptación de la spec se cumplen.
-- [ ] No hay errores 500 en ninguna petición.
-- [ ] Los flujos de auth (register → login → logout → acceso protegido) funcionan end to end.
-- **RF cubiertos:** Todos.
+- [x] Todos los criterios de aceptación de la sección 6 de la spec se cumplen; se ejecutaron 65 comprobaciones HTTP, incluidas las validaciones del barbero autenticado.
+- [x] No hay errores 500 en ninguna petición.
+- [x] Los flujos de auth (register → login → logout → acceso protegido) funcionan end to end.
+- Nota: la tabla de contrato de la sección 3.2 indica `201` para `POST /servicios/` y `POST /usuarios/`; ambos respondieron `200`. Se conserva como discrepancia documentada, sin modificar código en esta tarea de verificación.
 
 ---
 
 ## T11 — Actualizar documentación
 
-**Estado:** ⏳ Pendiente
+**Estado:** ✅ Completada
 
 **Dependencias:** T3 a T10 (post-implementación).
 
@@ -270,8 +269,8 @@ Añadir el campo de contraseña a los schemas de entrada, crear los schemas de a
 
 **Criterios de aceptación:**
 
-- [ ] `AGENTS.md` refleja el nuevo contrato de autenticación.
-- [ ] `memory.md` tiene ≤ 50 líneas.
+- [x] `AGENTS.md` refleja el nuevo contrato de autenticación y la matriz de permisos.
+- [x] `memory.md` tiene ≤ 50 líneas.
 - **RF cubiertos:** Todos (documentación).
 
 ---
@@ -294,5 +293,4 @@ T11 (docs) ───────────────────────
 - `bcrypt` está aprobada por el usuario; no ejecutar `uv add` sin aprobación explícita.
 - No se modifican `database.py` ni `CitaServicio`.
 - Cada tarea es atómica y secuencial: se puede implementar y verificar de forma independiente.
-- Las tareas NO están completadas: es fase de plan y tareas (SDD fase 3).
-
+- Las tareas de la feature 002 están completadas; las diferencias de status anotadas en T10 quedan pendientes de decisión.

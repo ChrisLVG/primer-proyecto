@@ -31,7 +31,7 @@ Eres el agente implementador (implementer) del Sitio web de la barberia. Ejecuta
 - Ejecuta un test levantando el servidor con - `uv run uvicorn src.primer_proyecto.main:app --reload --no-access-log` o `uv run primer-proyecto`: Alternativa al anterior, definida en `[project.scripts]`; usa `primer_proyecto.main` (el atributo `main` de `__init__.py`). Si mueves `main()`, actualiza `pyproject.toml`. Nunca des la tarea por hecha si el test falla.
 - Marca la tarea como hecha en tasks.md y PARA. No empieces la siguiente.
 - Si la tarea o el plan son incorrectos o imposibles, PARA y explícalo. No improvises una solución distinta.
-- Si es la última tarea de la spec, actualiza MEMORY.md.
+- Al terminar actualiza MEMORY.md.
 
 ## Respuesta Devuelve
 

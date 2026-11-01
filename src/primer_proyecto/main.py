@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+import bcrypt
+
+from fastapi import FastAPI, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 from datetime import date, datetime, time, timedelta
@@ -140,25 +142,43 @@ def root():
 
 # --- Usuarios ---
 
-@app.get("/usuarios/")
-def listar_usuarios(db: Session = Depends(get_db)):
-    # Ejecutamos la consulta SQL de lectura mapeada a través de SQLAlchemy
-    usuarios = db.query(models.Usuario).all()
+@app.get("/usuarios/", response_model=list[schemas.UsuarioResponse])
+def listar_usuarios(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(autenticador.get_current_user),
+):
+    # Ejecutamos la consulta SQL de lectura mapeada a través de SQLAlchemy.
+    # RF-4.7: el barbero ve todos los usuarios; el usuario autenticado solo ve el suyo.
+    if current_user.rol == "barbero":
+        usuarios = db.query(models.Usuario).all()
+    else:
+        usuarios = db.query(models.Usuario).filter(
+            models.Usuario.id == current_user.id
+        ).all()
     return usuarios
 
 
-@app.post("/usuarios/", response_model=schemas.UsuarioResponse)
-def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+@app.post("/usuarios/", response_model=schemas.UsuarioResponse,status_code=status.HTTP_201_CREATED)
+def crear_usuario(usuario: schemas.UsuarioCreate,db: Session = Depends(get_db),current_user: models.Usuario = Depends(autenticador.require_rol("barbero"))):
     # Verificamos si el correo ya existe en la base de datos
     existing_usuario = db.query(models.Usuario).filter(models.Usuario.correo == usuario.correo).first()
     if existing_usuario:
         raise HTTPException(status_code=400, detail="El correo ya está registrado.")
 
+    # Hasheamos la contraseña con bcrypt si se envía; si no, dejamos contrasena_hash nula.
+    contrasena_hash = None
+    if usuario.contrasena:
+        contrasena_hash = bcrypt.hashpw(
+            usuario.contrasena.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+
     try:
         nuevo_usuario = models.Usuario(
             nombre=usuario.nombre,
             numero=usuario.numero,
-            correo=usuario.correo
+            correo=usuario.correo,
+            contrasena_hash=contrasena_hash,
+            rol="usuario",  # Rol por defecto al crear (RF-4.7)
         )
         db.add(nuevo_usuario)
         db.commit()
@@ -170,10 +190,28 @@ def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
 
 
 @app.patch("/usuarios/{usuario_id}", response_model=schemas.UsuarioResponse)
-def actualizar_usuario(usuario_id: str, usuario: schemas.UsuarioUpdate, db: Session = Depends(get_db)):
+def actualizar_usuario(
+    usuario_id: str,
+    usuario: schemas.UsuarioUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(autenticador.get_current_user),
+):
+    # 404 — si el usuario objetivo no existe
     usuario_db = db.query(models.Usuario).filter(models.Usuario.id == usuario_id).first()
     if not usuario_db:
         raise HTTPException(status_code=404, detail="El usuario no está registrado.")
+
+    # 403 — control de acceso por rol y alcance (RF-4.7).
+    # El usuario autenticado solo puede modificar su propio registro y no puede gestionar roles.
+    if current_user.rol == "usuario":
+        if usuario_id != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="No puedes modificar el registro de otro usuario."
+            )
+        if usuario.rol is not None:
+            raise HTTPException(
+                status_code=403, detail="No puedes modificar el rol de tu propio registro."
+            )
 
     if usuario.nombre is not None:
         usuario_db.nombre = usuario.nombre
@@ -200,7 +238,11 @@ def actualizar_usuario(usuario_id: str, usuario: schemas.UsuarioUpdate, db: Sess
 
 
 @app.delete("/usuarios/{usuario_id}")
-def eliminar_usuario(usuario_id: str, db: Session = Depends(get_db)):
+def eliminar_usuario(
+    usuario_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(autenticador.require_rol("barbero")),
+):
     usuario_db = db.query(models.Usuario).filter(models.Usuario.id == usuario_id).first()
     if not usuario_db:
         raise HTTPException(status_code=404, detail="El usuario no está registrado.")
@@ -245,8 +287,8 @@ def listar_servicios(db: Session = Depends(get_db)):
     return servicios
 
 
-@app.post("/servicios/", response_model=schemas.ServicioResponse)
-def crear_servicio(servicio: schemas.ServicioCreate, db: Session = Depends(get_db)):
+@app.post("/servicios/", response_model=schemas.ServicioResponse,status_code=status.HTTP_201_CREATED)
+def crear_servicio(servicio: schemas.ServicioCreate,db: Session = Depends(get_db),current_user: models.Usuario = Depends(autenticador.require_rol("barbero"))):
     # Verificamos si el servicio ya existe en la base de datos
     existing_servicio = db.query(models.Servicio).filter(models.Servicio.nombre == servicio.nombre).first()
     if existing_servicio:
@@ -264,7 +306,12 @@ def crear_servicio(servicio: schemas.ServicioCreate, db: Session = Depends(get_d
 
 
 @app.patch("/servicios/{servicio_id}", response_model=schemas.ServicioResponse)
-def actualizar_servicio(servicio_id: str, servicio: schemas.ServicioUpdate, db: Session = Depends(get_db)):
+def actualizar_servicio(
+    servicio_id: str,
+    servicio: schemas.ServicioUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(autenticador.require_rol("barbero")),
+):
     servicio_db = db.query(models.Servicio).filter(models.Servicio.id == servicio_id).first()
     if not servicio_db:
         raise HTTPException(status_code=404, detail="El servicio no está registrado.")
@@ -302,7 +349,11 @@ def actualizar_servicio(servicio_id: str, servicio: schemas.ServicioUpdate, db: 
 
 
 @app.delete("/servicios/{servicio_id}")
-def eliminar_servicio(servicio_id: str, db: Session = Depends(get_db)):
+def eliminar_servicio(
+    servicio_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(autenticador.require_rol("barbero")),
+):
     servicio_db = db.query(models.Servicio).filter(models.Servicio.id == servicio_id).first()
     if not servicio_db:
         raise HTTPException(status_code=404, detail="El servicio no está registrado.")
@@ -432,7 +483,7 @@ def listar_citas(
     return consulta.offset(offset).limit(limit).all()
 
 
-@app.post("/citas/", response_model=schemas.CitaResponse)
+@app.post("/citas/",response_model=schemas.CitaResponse,status_code=status.HTTP_201_CREATED)
 def crear_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(autenticador.get_current_user)):
     # Validamos que el usuario ya existe en la base de datos
     existing_usuario = db.query(models.Usuario).filter(models.Usuario.id == cita.usuario_id).first()

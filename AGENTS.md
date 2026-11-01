@@ -30,13 +30,14 @@
 
 ## Modelo de datos
 
-- `usuarios`: antes era `clientes`. Unifica al cliente que agenda y al barbero. Campo `rol` (`'usuario'` | `'barbero'`) con default `'usuario'`.
+- `usuarios`: unifica clientes y barberos. `rol` admite `usuario` | `barbero` y por defecto es `usuario`. `contrasena_hash` almacena el hash bcrypt; nunca se almacena la contraseña en texto plano.
 - `servicios`: nombre, precio, duracion_minutos.
 - `citas`: `usuario_id` (antes `cliente_id`), `fecha_hora`, `estado`, `origen` (`'usuario'` | `'barbero'`), `precio_total`.
 - `cita_servicio`: **tabla intermedia** N:M entre citas y servicios, con clave primaria compuesta `(cita_id, servicio_id)` que impide repetir el mismo servicio en una cita. Una cita puede incluir varios servicios.
 - `Cita.origen` es un **snapshot**, no un campo derivado: se escribe al crear la cita y nunca se recalcula a partir del `rol` actual del usuario.
 - `Cita.precio_total` está **desnormalizado** y se recalcula en cada escritura: al crear cita, al cambiar sus servicios, y al cambiar el precio de un servicio.
 - En los modelos, la clase de la tabla intermedia es `CitaServicio`; `models.cita_servicio` NO existe (el nombre de la tabla no es un atributo del módulo). Usa `models.CitaServicio` en las consultas.
+- `sesiones`: sesiones de autenticación con `token_hash` (SHA-256 del token opaco), `usuario_id`, `created_at` y `expires_at` (TTL de 24 h).
 
 ## Rutas de la API
 
@@ -51,6 +52,14 @@
 - `GET /citas/?limit=&offset=`: paginación (`limit` 1-500, default 100; `offset` ≥ 0, default 0). Fuera de rango da `422`.
 - Todos los filtros de `GET /citas/` son opcionales y se combinan con AND. El orden es `fecha_hora ASC, id ASC` (el `id` desempata para que la paginación sea estable).
 - Borrar un usuario elimina sus citas y sesiones; borrar un servicio elimina las citas que quedarían sin servicios y recalcula los precios de las restantes.
+
+### Autenticación y permisos
+
+- Registro e inicio de sesión (`POST /auth/register` y `POST /auth/login`) son públicos; el registro asigna el rol `usuario`. Cerrar sesión (`POST /auth/logout`) requiere un token Bearer válido.
+- El token es opaco; la base de datos conserva su hash SHA-256 y la sesión expira a las 24 horas. Los endpoints protegidos responden `401` si falta el token, no es válido o expiró; responden `403` si el rol o el alcance no autorizan la operación.
+- `GET /servicios/` es público. `POST`, `PATCH` y `DELETE /servicios/` requieren rol `barbero`.
+- Los endpoints de citas requieren autenticación: el barbero consulta y gestiona todas las citas y agenda para cualquier usuario; cada usuario consulta y gestiona solo sus citas. El origen se asigna según el rol autenticado.
+- `GET /usuarios/` requiere autenticación: el barbero ve todos los registros y cada usuario solo el propio. `POST` y `DELETE /usuarios/` requieren rol `barbero`. `PATCH /usuarios/{usuario_id}` permite al barbero editar cualquiera; un usuario solo puede editar sus datos y no gestionar roles.
 
 ## Solapamiento de horarios (implementado)
 
