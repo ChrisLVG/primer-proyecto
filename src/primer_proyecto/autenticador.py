@@ -11,9 +11,34 @@ from datetime import datetime, timedelta
 from .database import get_db
 from . import models
 from . import schemas
+from .utilidades import ROL_BARBERO, ROL_USUARIO
+
+DURACION_SESION = timedelta(hours=24)
 
 security = HTTPBearer(auto_error=False)
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
+SesionDB = Annotated[Session, Depends(get_db)]
+
+
+def hashear_contrasena(contrasena: str) -> str:
+    """Genera y devuelve el hash bcrypt de una contraseña."""
+    return bcrypt.hashpw(
+        contrasena.encode("utf-8"), bcrypt.gensalt()
+    ).decode("utf-8")
+
+
+def _verificar_contrasena(contrasena: str, contrasena_hash: str) -> bool:
+    """Comprueba una contraseña contra su hash bcrypt."""
+    return bcrypt.checkpw(
+        contrasena.encode("utf-8"),
+        contrasena_hash.encode("utf-8"),
+    )
+
+
+def _ahora() -> datetime:
+    """Devuelve la fecha y hora local actual."""
+    return datetime.now()
+
 
 # --- Autenticación ---
 
@@ -22,7 +47,7 @@ router = APIRouter(prefix="/auth", tags=["Autenticación"])
     response_model=schemas.UsuarioResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def registrar_usuario(registro: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+def registrar_usuario(registro: schemas.UsuarioCreate, db: SesionDB):
     """Registra un nuevo usuario público con rol `usuario` (RF-1).
 
     Es un endpoint público: no requiere token de autenticación. La contraseña se hashea con
@@ -41,9 +66,7 @@ def registrar_usuario(registro: schemas.UsuarioCreate, db: Session = Depends(get
 
     # Hasheamos la contraseña con bcrypt antes de almacenarla (RF-1.2).
     # bcrypt impone un límite de 72 bytes, ya validado por el esquema de entrada.
-    contrasena_hash = bcrypt.hashpw(
-        registro.contrasena.encode("utf-8"), bcrypt.gensalt()
-    ).decode("utf-8")
+    contrasena_hash = hashear_contrasena(registro.contrasena)
 
     try:
         nuevo_usuario = models.Usuario(
@@ -51,7 +74,7 @@ def registrar_usuario(registro: schemas.UsuarioCreate, db: Session = Depends(get
             numero=registro.numero,
             correo=registro.correo,
             contrasena_hash=contrasena_hash,
-            rol="usuario",  # Rol por defecto al registrarse (RF-1.5)
+            rol=ROL_USUARIO,  # Rol por defecto al registrarse (RF-1.5)
         )
         db.add(nuevo_usuario)
         db.commit()
@@ -81,14 +104,14 @@ def _crear_sesion(db: Session, usuario_id: str) -> str: #se ejecuta cuando el us
     token_hash = _hash_token(token)
 
     # Una única variable `ahora` para mantener la consistencia de la marca temporal
-    ahora = datetime.now()
+    ahora = _ahora()
 
     try:
         sesion = models.Sesion(
             token_hash=token_hash,
             usuario_id=usuario_id,
             created_at=ahora,
-            expires_at=ahora + timedelta(hours=24),
+            expires_at=ahora + DURACION_SESION,
         )
         db.add(sesion)
         db.commit()
@@ -115,15 +138,16 @@ def _obtener_sesion_valida(db: Session, token: str) -> models.Sesion: # metodo p
     if sesion is None:
         raise HTTPException(status_code=401, detail="Sesión no válida.")
 
-    if sesion.expires_at < datetime.now():
+    if sesion.expires_at < _ahora():
         raise HTTPException(status_code=401, detail="La sesión ha expirado.")
 
     return sesion
 
 
 def get_current_user(
+    *,
     token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
-    db: Session = Depends(get_db),
+    db: SesionDB,
 ) -> models.Usuario: #funcion verifica si el usuario esta autenticado y lo devuelve, usa el metodo para verificar si la sesion no ha expirado
     """Devuelve el usuario autenticado a partir del token Bearer.
 
@@ -138,6 +162,9 @@ def get_current_user(
     return sesion.usuario
 
 
+UsuarioActual = Annotated[models.Usuario, Depends(get_current_user)]
+
+
 def require_rol(rol_requerido: str): # funcion que recibe como parametro un rol, usa la funcion para verificar si el usuario esta autenticado, cuenta con un metodo que extrae el rol de ese usuario y verifica si es el rol requerido
     """Devuelve una dependencia que exige que el usuario autenticado tenga el rol indicado.
 
@@ -145,7 +172,7 @@ def require_rol(rol_requerido: str): # funcion que recibe como parametro un rol,
     autenticado, `get_current_user` ya responde con 401.
     """
 
-    def _verificar_rol(current_user: models.Usuario = Depends(get_current_user)) -> models.Usuario:
+    def _verificar_rol(current_user: UsuarioActual) -> models.Usuario:
         if current_user.rol != rol_requerido:
             raise HTTPException(
                 status_code=403,
@@ -156,8 +183,31 @@ def require_rol(rol_requerido: str): # funcion que recibe como parametro un rol,
     return _verificar_rol
 
 
+SoloBarbero = Annotated[
+    models.Usuario,
+    Depends(require_rol(ROL_BARBERO)),
+]
+
+
+def _autenticar(db: Session, correo: str, contrasena: str) -> models.Usuario:
+    """Autentica las credenciales o responde con el error genérico 401."""
+    usuario = (
+        db.query(models.Usuario)
+        .filter(models.Usuario.correo == correo)
+        .first()
+    )
+    if (
+        usuario is None
+        or usuario.contrasena_hash is None
+        or not _verificar_contrasena(contrasena, usuario.contrasena_hash)
+    ):
+        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
+
+    return usuario
+
+
 @router.post("/login", response_model=schemas.AuthResponse)
-def iniciar_sesion(credenciales: schemas.LoginRequest, db: Session = Depends(get_db)):
+def iniciar_sesion(credenciales: schemas.LoginRequest, db: SesionDB):
     """Inicia sesión con correo y contraseña (RF-2.1, RF-2.3).
 
     Autentica al usuario con sus credenciales y, si son válidas, emite un token
@@ -165,27 +215,7 @@ def iniciar_sesion(credenciales: schemas.LoginRequest, db: Session = Depends(get
     inexistente, contraseña incorrecta o usuario sin contraseña) se rechazan
     con 401 sin revelar qué parte falló.
     """
-    # 1. Buscamos al usuario por correo
-    usuario = (
-        db.query(models.Usuario)
-        .filter(models.Usuario.correo == credenciales.correo)
-        .first()
-    )
-
-    # 2. Usuario inexistente → credenciales inválidas (sin revelar si el correo existe)
-    if usuario is None:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
-
-    # 3. Usuario sin contraseña (creado por POST /usuarios/ o promovido sin contraseña)
-    if usuario.contrasena_hash is None:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
-
-    # 4. Verificamos la contraseña antes de crear la sesión (fallar temprano)
-    if not bcrypt.checkpw(
-        credenciales.contrasena.encode("utf-8"),
-        usuario.contrasena_hash.encode("utf-8"),
-    ):
-        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
+    usuario = _autenticar(db, credenciales.correo, credenciales.contrasena)
 
     # 5. Creamos la sesión y obtenemos el token opaco
     token = _crear_sesion(db, usuario.id)
@@ -196,8 +226,9 @@ def iniciar_sesion(credenciales: schemas.LoginRequest, db: Session = Depends(get
 
 @router.post("/logout", response_model=schemas.LogoutResponse)
 def cerrar_sesion(
+    *,
     token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
-    db: Session = Depends(get_db),
+    db: SesionDB,
 ):
     """Cierra la sesión del usuario autenticado (RF-3.1, RF-3.2).
 

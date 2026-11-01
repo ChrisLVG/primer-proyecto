@@ -3,10 +3,11 @@ Mantén este archivo en máx. 50 líneas. Resume o elimina tareas pasadas integr
 
 ## Estado actual
 CRUD completo de usuarios, servicios y citas. Feature 001 verificada por HTTP real.
-Feature 002: T1-T11 completadas y validadas por el revisor RF por RF (veredicto: SIN CAMBIOS NECESARIOS). Fix Decisi�n 8 �8: contrasena opcional en PATCH /usuarios/{id} para establecer hash bcrypt al promover a barbero.
+Feature 002: T1-T11 completadas y validadas por el revisor RF por RF (veredicto: SIN CAMBIOS NECESARIOS). Fix Decisi�n 8 �8: contrasena opcional en PATCH /usuarios/{id} para establecer hash bcrypt al promover a barbero.
 Nota: T10 verificada por HTTP real (0 errores 500); caminos positivos de barbero ahora ejecutables en principio tras el fix.
+Refactor spec 004 implementada en `refactor/main2`: T1-T10; regresión final con 32 grupos HTTP/OpenAPI más logout/expiración, sin 500 y usando SQLite en memoria. Contrato y permisos conservados.
 
-## T8 — Proteger endpoints de usuarios (main.py)
+## Historial — Protección de usuarios (Feature 002)
 - `GET /usuarios/`: `get_current_user`; barbero→todos; usuario→solo propio. `response_model=list[UsuarioResponse]` para no exponer `contrasena_hash`.
 - `POST /usuarios/`: `require_rol("barbero")`; rol por defecto `"usuario"`; bcrypt si `contrasena` viene, si no `contrasena_hash=None`.
 - `PATCH /usuarios/{id}`: `get_current_user`; orden 401→404→403→400→200. Usuario solo propio, sin gestión de rol (403 si intenta rol ajeno o cambiar rol). Barbero edita cualquier usuario, incluido rol.
@@ -26,6 +27,9 @@ Nota: T10 verificada por HTTP real (0 errores 500); caminos positivos de barbero
 - Convenciones: type hints 3.12+, docstrings/comentarios en español, `ConfigDict(from_attributes=True)`, `Depends(get_db)`, `db.rollback()` en try/except.
 
 ## Próximos pasos
+- [x] T6: extraer constantes y helpers compartidos a `utilidades.py`; imports y 12 verificaciones HTTP aprobadas en SQLite en memoria.
+- [x] T7: constitución 1.3.0; routers de usuarios/servicios; 28 verificaciones HTTP y paths OpenAPI aprobados.
+- [x] T8: crear router de citas; regresión HTTP de filtros, permisos, fechas, solapamientos y rollback aprobada en memoria.
+- [x] T9: composición, `AGENTS.md` y entry point verificados.
+- [x] T10: regresión HTTP final, sin 500 y sin tocar la base local.
 - [x] T9: proteger servicios (GET público; escritura solo barbero).
-- [x] T9: proteger servicios (GET p�blico; escritura solo barbero).
-- [x] T10: verificar por HTTP real, incluida la cuenta barbero autenticada con contrase�a.
