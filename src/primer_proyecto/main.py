@@ -1,9 +1,4 @@
-import bcrypt
-import hashlib
-import secrets
-from typing import Annotated
-from fastapi import FastAPI, Depends, HTTPException, Query, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 from datetime import date, datetime, time, timedelta
@@ -11,6 +6,7 @@ from datetime import date, datetime, time, timedelta
 from .database import get_db, engine
 from . import models
 from . import schemas
+from . import autenticador
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -19,6 +15,7 @@ app = FastAPI(
     description="Esta API permite gestionar usuarios, servicios y citas para una barberia.",
     version="1.0.0"
 )
+app.include_router(autenticador.router)
 
 
 def _obtener_servicios(db: Session, servicios_ids: list[str]) -> list[models.Servicio]:
@@ -358,12 +355,14 @@ def listar_citas(
     origen: str | None = Query(None, description="Filtra las citas por origen: 'usuario' o 'barbero'"),
     limit: int = Query(100, ge=1, le=500, description="Máximo de citas a devolver"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(autenticador.get_current_user),
 ):
     """Lista las citas registradas, ordenadas por fecha ascendente.
 
     Todos los filtros son opcionales y se combinan entre sí (AND). Si no se indica ninguno,
-    devuelve todas las citas.
+    devuelve todas las citas. Un usuario autenticado con rol ``usuario`` solo puede consultar
+    sus propias citas; el barbero puede consultar todas.
     """
     # Validamos los filtros antes de consultar para no devolver datos con parámetros inválidos
     if origen is not None and origen not in ("usuario", "barbero"):
@@ -379,6 +378,13 @@ def listar_citas(
         existing_usuario = db.query(models.Usuario).filter(models.Usuario.id == usuario_id).first()
         if not existing_usuario:
             raise HTTPException(status_code=400, detail="El usuario no está registrado.")
+
+    # Control de acceso por rol: un usuario autenticado solo puede consultar sus propias citas;
+    # el barbero puede filtrar por cualquier usuario_id.
+    if current_user.rol == "usuario":
+        if usuario_id is not None and usuario_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No puedes consultar citas de otro usuario.")
+        usuario_id = current_user.id
 
     # Convertimos las fechas al instante correspondiente. Si solo se envía uno de los dos extremos,
     # se cubre el día completo de esa fecha; si se envían ambos, se cubren los días completos de
@@ -427,11 +433,16 @@ def listar_citas(
 
 
 @app.post("/citas/", response_model=schemas.CitaResponse)
-def crear_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
+def crear_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(autenticador.get_current_user)):
     # Validamos que el usuario ya existe en la base de datos
     existing_usuario = db.query(models.Usuario).filter(models.Usuario.id == cita.usuario_id).first()
     if not existing_usuario:
         raise HTTPException(status_code=400, detail="El usuario no está registrado.")
+
+    # Control de acceso por rol: un usuario autenticado solo puede crear citas para sí mismo;
+    # el barbero puede crear citas para cualquier cliente (usuario_id del cliente señalado).
+    if current_user.rol == "usuario" and cita.usuario_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No puedes crear citas para otro usuario.")
 
     # Validamos que todos los servicios existen y calculamos el precio total
     servicios = _obtener_servicios(db, cita.servicios_ids)
@@ -449,13 +460,14 @@ def crear_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
         if ids_existentes == set(cita.servicios_ids):
             raise HTTPException(status_code=400, detail="La cita ya está registrada.")
 
-    # El origen por defecto se determina según el rol del usuario; si viene explícito, se respeta
+    # El origen por defecto se determina según el rol del usuario autenticado; si se envía
+    # explícito, debe corresponder a ese rol (RF-4.4 / RF-4.5).
     if cita.origen is None:
-        origen = existing_usuario.rol
+        origen = current_user.rol
+    elif cita.origen != current_user.rol:
+        raise HTTPException(status_code=400, detail="El origen no corresponde al rol del usuario autenticado.")
     else:
         origen = cita.origen
-    if origen not in ("usuario", "barbero"):
-        raise HTTPException(status_code=400, detail="El origen debe ser 'usuario' o 'barbero'.")
 
     # Verificamos que la cita no se solape con ninguna otra cita activa. La cita ocupa el
     # intervalo [fecha_hora, fecha_hora + duración total de sus servicios).
@@ -484,11 +496,16 @@ def crear_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
 
 
 @app.patch("/citas/{cita_id}", response_model=schemas.CitaResponse)
-def actualizar_cita(cita_id: str, cita: schemas.CitaUpdate, db: Session = Depends(get_db)):
+def actualizar_cita(cita_id: str, cita: schemas.CitaUpdate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(autenticador.get_current_user)):
     # Verificamos si la cita existe en la base de datos
     existing_cita = db.query(models.Cita).filter(models.Cita.id == cita_id).first()
     if not existing_cita:
         raise HTTPException(status_code=404, detail="La cita no está registrada.")
+
+    # Control de acceso por rol: un usuario autenticado solo puede modificar sus propias citas;
+    # el barbero puede modificar cualquier cita.
+    if current_user.rol == "usuario" and existing_cita.usuario_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No puedes modificar citas de otro usuario.")
 
     # El estado solo admite los cuatro valores previstos; se valida aquí para devolver 400
     # en lugar del 422 que generaría el esquema.
@@ -557,224 +574,18 @@ def actualizar_cita(cita_id: str, cita: schemas.CitaUpdate, db: Session = Depend
 
 
 @app.delete("/citas/{cita_id}")
-def eliminar_cita(cita_id: str, db: Session = Depends(get_db)):
+def eliminar_cita(cita_id: str, db: Session = Depends(get_db), current_user: models.Usuario = Depends(autenticador.get_current_user)):
     # Verificamos si la cita existe en la base de datos
     existing_cita = db.query(models.Cita).filter(models.Cita.id == cita_id).first()
     if not existing_cita:
         raise HTTPException(status_code=404, detail="La cita no está registrada.")
 
+    # Control de acceso por rol: un usuario autenticado solo puede eliminar sus propias citas;
+    # el barbero puede eliminar cualquier cita.
+    if current_user.rol == "usuario" and existing_cita.usuario_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No puedes eliminar citas de otro usuario.")
+
     db.delete(existing_cita)
     db.commit()
 
     return {"message": "Cita eliminada correctamente"}
-
-
-security = HTTPBearer(auto_error=False)
-
-
-# --- Autenticación ---
-
-@app.post(
-    "/auth/register",
-    response_model=schemas.UsuarioResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def registrar_usuario(registro: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    """Registra un nuevo usuario público con rol `usuario` (RF-1).
-
-    Es un endpoint público: no requiere token de autenticación. La contraseña se hashea con
-    bcrypt antes de almacenarla (RF-1.2) y nunca se devuelve en la respuesta, ya que
-    `UsuarioResponse` no la incluye. Si el correo ya está registrado se devuelve 400
-    (RF-1.3); los errores de validación del esquema se devuelven como 422 por Pydantic.
-    """
-    # Validamos que el correo no esté ya registrado (RF-1.3)
-    existing_usuario = (
-        db.query(models.Usuario)
-        .filter(models.Usuario.correo == registro.correo)
-        .first()
-    )
-    if existing_usuario:
-        raise HTTPException(status_code=400, detail="El correo ya está registrado.")
-
-    # Hasheamos la contraseña con bcrypt antes de almacenarla (RF-1.2).
-    # bcrypt impone un límite de 72 bytes, ya validado por el esquema de entrada.
-    contrasena_hash = bcrypt.hashpw(
-        registro.contrasena.encode("utf-8"), bcrypt.gensalt()
-    ).decode("utf-8")
-
-    try:
-        nuevo_usuario = models.Usuario(
-            nombre=registro.nombre,
-            numero=registro.numero,
-            correo=registro.correo,
-            contrasena_hash=contrasena_hash,
-            rol="usuario",  # Rol por defecto al registrarse (RF-1.5)
-        )
-        db.add(nuevo_usuario)
-        db.commit()
-        db.refresh(nuevo_usuario)
-        return nuevo_usuario
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="El correo ya está registrado.")
-
-
-def _hash_token(token: str) -> str:
-    """Devuelve el hash SHA-256 hexadecimal del token opaco.
-
-    El token opaco nunca se almacena en texto plano; solo se guarda su hash
-    en la tabla ``sesiones`` para poder localizarlo sin exponerlo.
-    """
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-
-def _crear_sesion(db: Session, usuario_id: str) -> str:
-    """Genera un token opaco, persiste su hash SHA-256 con TTL de 24 h y devuelve el token.
-
-    El token se entrega en texto plano al cliente; en la base de datos solo se
-    almacena su hash SHA-256 junto con la fecha de creación y de expiración.
-    """
-    token = secrets.token_urlsafe(32)
-    token_hash = _hash_token(token)
-
-    # Una única variable `ahora` para mantener la consistencia de la marca temporal
-    ahora = datetime.now()
-
-    try:
-        sesion = models.Sesion(
-            token_hash=token_hash,
-            usuario_id=usuario_id,
-            created_at=ahora,
-            expires_at=ahora + timedelta(hours=24),
-        )
-        db.add(sesion)
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="No se pudo crear la sesión.")
-
-    return token
-
-
-def _obtener_sesion_valida(db: Session, token: str) -> models.Sesion:
-    """Valida que exista una sesión activa y no expirada para el token dado.
-
-    Calcula el hash SHA-256 del token opaco, busca la sesión en la base de datos y
-    comprueba que no haya superado su fecha de expiración. Lanza 401 si la sesión
-    no existe o ha expirado.
-    """
-    token_hash = _hash_token(token)
-    sesion = (
-        db.query(models.Sesion)
-        .filter(models.Sesion.token_hash == token_hash)
-        .first()
-    )
-    if sesion is None:
-        raise HTTPException(status_code=401, detail="Sesión no válida.")
-
-    if sesion.expires_at < datetime.now():
-        raise HTTPException(status_code=401, detail="La sesión ha expirado.")
-
-    return sesion
-
-
-def get_current_user(
-    token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
-    db: Session = Depends(get_db),
-) -> models.Usuario:
-    """Devuelve el usuario autenticado a partir del token Bearer.
-
-    Si no se envía token, lanza 401 "No autenticado.". Si la sesión no existe
-    o ha expirado, `_obtener_sesion_valida` lanza el 401 correspondiente.
-    Devuelve el modelo `Usuario` asociado a la sesión válida.
-    """
-    if token is None:
-        raise HTTPException(status_code=401, detail="No autenticado.")
-
-    sesion = _obtener_sesion_valida(db, token.credentials)
-    return sesion.usuario
-
-
-def require_rol(rol_requerido: str):
-    """Devuelve una dependencia que exige que el usuario autenticado tenga el rol indicado.
-
-    Si el rol del usuario no coincide, responde con 403. Si el usuario no está
-    autenticado, `get_current_user` ya responde con 401.
-    """
-
-    def _verificar_rol(current_user: models.Usuario = Depends(get_current_user)) -> models.Usuario:
-        if current_user.rol != rol_requerido:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Se requiere rol '{rol_requerido}'.",
-            )
-        return current_user
-
-    return _verificar_rol
-
-
-@app.post("/auth/login", response_model=schemas.AuthResponse)
-def iniciar_sesion(credenciales: schemas.LoginRequest, db: Session = Depends(get_db)):
-    """Inicia sesión con correo y contraseña (RF-2.1, RF-2.3).
-
-    Autentica al usuario con sus credenciales y, si son válidas, emite un token
-    opaco con TTL de 24 horas (RF-2.2). Las credenciales inválidas (correo
-    inexistente, contraseña incorrecta o usuario sin contraseña) se rechazan
-    con 401 sin revelar qué parte falló.
-    """
-    # 1. Buscamos al usuario por correo
-    usuario = (
-        db.query(models.Usuario)
-        .filter(models.Usuario.correo == credenciales.correo)
-        .first()
-    )
-
-    # 2. Usuario inexistente → credenciales inválidas (sin revelar si el correo existe)
-    if usuario is None:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
-
-    # 3. Usuario sin contraseña (creado por POST /usuarios/ o promovido sin contraseña)
-    if usuario.contrasena_hash is None:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
-
-    # 4. Verificamos la contraseña antes de crear la sesión (fallar temprano)
-    if not bcrypt.checkpw(
-        credenciales.contrasena.encode("utf-8"),
-        usuario.contrasena_hash.encode("utf-8"),
-    ):
-        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
-
-    # 5. Creamos la sesión y obtenemos el token opaco
-    token = _crear_sesion(db, usuario.id)
-
-    # 6. Devolvemos el token junto con los datos del usuario (sin contraseña)
-    return schemas.AuthResponse(token=token, usuario=usuario)
-
-
-@app.post("/auth/logout", response_model=schemas.LogoutResponse)
-def cerrar_sesion(
-    token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
-    db: Session = Depends(get_db),
-):
-    """Cierra la sesión del usuario autenticado (RF-3.1, RF-3.2).
-
-    Elimina la sesión asociada al token Bearer recibido en el header
-    ``Authorization: Bearer <token>``. Si no hay token, o el token es inválido
-    o ha expirado, se responde con 401.
-    """
-    if token is None:
-        raise HTTPException(status_code=401, detail="No autenticado.")
-
-    sesion = _obtener_sesion_valida(db, token.credentials)
-
-    try:
-        db.delete(sesion)
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="No se pudo cerrar la sesión.",
-        )
-
-    return schemas.LogoutResponse(message="Sesión cerrada correctamente")

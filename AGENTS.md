@@ -17,6 +17,7 @@
 - `src/primer_proyecto/`: Código fuente de la aplicación.
 - `AGENTS.md`: Reglas y guardarraíles del repositorio para el agente de IA.
 - `main.py`: Punto de entrada principal e itineración de rutas de la API FastAPI.
+- `autenticador.py`: `APIRouter` con prefijo `/auth`; agrupa registro, login, logout y dependencias de autenticación y control de rol. `main.py` lo registra con `app.include_router(autenticador.router)`.
 - `database.py`: Configuración de SQLAlchemy y gestión de sesiones de base de datos.
 - `models.py`: Modelos ORM de la base de datos.
 - `schemas.py`: Esquemas Pydantic para validación de datos de entrada y salida.
@@ -42,6 +43,7 @@
 - `GET /`, `GET|POST /usuarios/`, `PATCH|DELETE /usuarios/{usuario_id}`
 - `GET|POST /servicios/`, `PATCH|DELETE /servicios/{servicio_id}`
 - `GET|POST /citas/`, `PATCH|DELETE /citas/{cita_id}`
+- `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` (definidos en `autenticador.py` y montados desde `main.py`).
 - `GET /citas/?origen=usuario|barbero`: filtra las citas por origen. Sin el parámetro devuelve todas. Un valor distinto de esos dos da `400`.
 - `GET /citas/?fecha_desde=&fecha_hasta=`: filtra por rango de fechas. Se aceptan `YYYY-MM-DD` (cubre el día completo) o `YYYY-MM-DDTHH:MM:SS` (instante exacto). Si solo se envía uno de los dos, se filtra ese día completo. Rango invertido da `400`.
 - `GET /citas/?estado=pendiente|confirmada|cancelada|terminada`: filtra por estado. Cualquier otro valor da `400`.
@@ -80,6 +82,7 @@ Los cuatro valores válidos son `pendiente`, `confirmada`, `cancelada` y `termin
 - Usar `ConfigDict(from_attributes=True)` en los esquemas Pydantic de respuesta.
 - NUNCA mezcles modelos de SQLAlchemy (`models.py`) con esquemas de validación Pydantic (`schemas.py`).
 - Inyectar la sesión de base de datos en los endpoints de `main.py` usando únicamente `Depends(get_db)`.
+- Mantener endpoints y dependencias de autenticación en `autenticador.py`; importar las dependencias desde ese módulo y montar su router en `main.py` con `app.include_router(...)`. No crear una aplicación `FastAPI` separada en módulos de rutas.
 - Retornar errores de negocio mediante `HTTPException` de FastAPI (`400`, `404`, `422`).
 - Ejecutar `db.rollback()` explícito en bloques `try/except` ante fallos de escritura en SQLite.
 

@@ -4,6 +4,8 @@
 ## Estado actual
 CRUD completo de usuarios, servicios y citas operativa. Feature 001 (filtrar y listar citas) implementada y verificada por HTTP real. Pendiente: autenticaci贸n y frontend.
 - Spec 003 completada: borrar servicio elimina citas que quedar铆an vac铆as y recalcula precios restantes; borrar usuario elimina citas y sesiones. Pruebas HTTP: T1 7/7, T2 5/5, regresi贸n final 12/12 en SQLite en memoria. Documentaci贸n sincronizada; sin cambios de esquema ni datos locales.
+- `autenticador.py` expone un `APIRouter` con prefijo `/auth`, incluido en `main.py`; registro, login y logout verificados por HTTP (5/5).
+- Constituci贸n actualizada a v1.2.0 y `AGENTS.md` documenta la responsabilidad del router `/auth` y su inclusi贸n desde `main.py`.
 
 ## Aprendizajes y hallazgos
 - La relaci贸n cita-servicios es **N:M**: tabla intermedia `cita_servicio` con clave primaria compuesta. El modelo 1:N anterior obligaba a duplicar citas.
@@ -36,7 +38,7 @@ CRUD completo de usuarios, servicios y citas operativa. Feature 001 (filtrar y l
 - `POST /auth/register` (T3, RF-1): p煤blico, bcrypt, 201/400/422. Verificado por HTTP real.
 - `POST /auth/login` (T4, RF-2):helpers `_hash_token` y `_crear_sesion` (token opaco `secrets.token_urlsafe(32)`, hash SHA-256, TTL 24 h). Verificaci贸n antes de crear sesi贸n; usuario sin contrase帽a tambi茅n da `401`. Verificado por HTTP real (7/7).
 - T5 completada: `POST /auth/logout` implementada con `_obtener_sesion_valida`, `HTTPBearer(auto_error=False)` y eliminaci贸n de sesi贸n con `db.rollback()` en `try/except`. Prueba HTTP real: 10/10 (v谩lido, repetido, sin header, token inv谩lido/expirado, sesi贸n borrada y codificaci贸n Unicode). Pendientes: T6 (dependencias auth), T7鈥揟9 (proteger endpoints), T10 (verificaci贸n HTTP), T11 (docs).
-- T6 completada: get_current_user (valida sesi髇, 401 si no hay token/inv醠ida/expirada) y equire_rol(rol) (403 si rol insuficiente). M骴ulo cargado sin errores.
+- T6 completada: get_current_user (valida sesi锟絥, 401 si no hay token/inv锟絣ida/expirada) y equire_rol(rol) (403 si rol insuficiente). M锟絛ulo cargado sin errores.
 
 ## Pr贸ximos pasos
 - [ ] Sistema de autenticaci贸n y sesiones (LocalStorage / Cookies HttpOnly). Requiere especificaci贸n propia.
