@@ -26,6 +26,7 @@ class UsuarioUpdate(BaseModel):
     numero: str | None = None
     correo: str | None = None
     rol: str | None = None
+    contrasena: str | None = Field(None, min_length=8, max_length=72, description="Contraseña del usuario (mínimo 8 caracteres, máximo 72 bytes, límite bcrypt)")
 
 
 class UsuarioDelete(BaseModel):

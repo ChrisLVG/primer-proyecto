@@ -227,6 +227,11 @@ def actualizar_usuario(
             raise HTTPException(status_code=400, detail="El correo ya está registrado.")
         usuario_db.correo = usuario.correo
 
+    if usuario.contrasena is not None:
+        usuario_db.contrasena_hash = bcrypt.hashpw(
+            usuario.contrasena.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+
     if usuario.rol is not None:
         if usuario.rol not in ("usuario", "barbero"):
             raise HTTPException(status_code=400, detail="El rol debe ser 'usuario' o 'barbero'.")

@@ -62,7 +62,7 @@ def registrar_usuario(registro: schemas.UsuarioCreate, db: Session = Depends(get
         raise HTTPException(status_code=400, detail="El correo ya está registrado.")
 
 
-def _hash_token(token: str) -> str:
+def _hash_token(token: str) -> str: # metodo para encriptar un token
     """Devuelve el hash SHA-256 hexadecimal del token opaco.
 
     El token opaco nunca se almacena en texto plano; solo se guarda su hash
@@ -71,7 +71,7 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def _crear_sesion(db: Session, usuario_id: str) -> str:
+def _crear_sesion(db: Session, usuario_id: str) -> str: #se ejecuta cuando el usuario hace un login, usa el metodo para encriptar el token, lo guarda en la base de datos y devuelve el token en texto plano
     """Genera un token opaco, persiste su hash SHA-256 con TTL de 24 h y devuelve el token.
 
     El token se entrega en texto plano al cliente; en la base de datos solo se
@@ -99,7 +99,7 @@ def _crear_sesion(db: Session, usuario_id: str) -> str:
     return token
 
 
-def _obtener_sesion_valida(db: Session, token: str) -> models.Sesion:
+def _obtener_sesion_valida(db: Session, token: str) -> models.Sesion: # metodo para verificar si una sesion no ha caducado y devolverla
     """Valida que exista una sesión activa y no expirada para el token dado.
 
     Calcula el hash SHA-256 del token opaco, busca la sesión en la base de datos y
@@ -124,7 +124,7 @@ def _obtener_sesion_valida(db: Session, token: str) -> models.Sesion:
 def get_current_user(
     token: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
     db: Session = Depends(get_db),
-) -> models.Usuario:
+) -> models.Usuario: #funcion verifica si el usuario esta autenticado y lo devuelve, usa el metodo para verificar si la sesion no ha expirado
     """Devuelve el usuario autenticado a partir del token Bearer.
 
     Si no se envía token, lanza 401 "No autenticado.". Si la sesión no existe
@@ -138,7 +138,7 @@ def get_current_user(
     return sesion.usuario
 
 
-def require_rol(rol_requerido: str):
+def require_rol(rol_requerido: str): # funcion que recibe como parametro un rol, usa la funcion para verificar si el usuario esta autenticado, cuenta con un metodo que extrae el rol de ese usuario y verifica si es el rol requerido
     """Devuelve una dependencia que exige que el usuario autenticado tenga el rol indicado.
 
     Si el rol del usuario no coincide, responde con 403. Si el usuario no está

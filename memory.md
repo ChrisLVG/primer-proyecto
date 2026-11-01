@@ -3,8 +3,8 @@ Mantén este archivo en máx. 50 líneas. Resume o elimina tareas pasadas integr
 
 ## Estado actual
 CRUD completo de usuarios, servicios y citas. Feature 001 verificada por HTTP real.
-Feature 002: T1-T9 implementadas; T10 verificada por HTTP real (65 comprobaciones, 0 errores 500); T11 documentada.
-Nota pendiente: la spec §3.2 espera HTTP 201 en POST /servicios/ y POST /usuarios/, pero ambos endpoints responden 200.
+Feature 002: T1-T11 completadas y validadas por el revisor RF por RF (veredicto: SIN CAMBIOS NECESARIOS). Fix Decisi�n 8 �8: contrasena opcional en PATCH /usuarios/{id} para establecer hash bcrypt al promover a barbero.
+Nota: T10 verificada por HTTP real (0 errores 500); caminos positivos de barbero ahora ejecutables en principio tras el fix.
 
 ## T8 — Proteger endpoints de usuarios (main.py)
 - `GET /usuarios/`: `get_current_user`; barbero→todos; usuario→solo propio. `response_model=list[UsuarioResponse]` para no exponer `contrasena_hash`.
@@ -27,5 +27,5 @@ Nota pendiente: la spec §3.2 espera HTTP 201 en POST /servicios/ y POST /usuari
 
 ## Próximos pasos
 - [x] T9: proteger servicios (GET público; escritura solo barbero).
-- [x] T10: verificar por HTTP real, incluida la cuenta barbero autenticada con contraseña.
-- [x] T11: actualizar AGENTS.md y memory.md.
+- [x] T9: proteger servicios (GET p�blico; escritura solo barbero).
+- [x] T10: verificar por HTTP real, incluida la cuenta barbero autenticada con contrase�a.
