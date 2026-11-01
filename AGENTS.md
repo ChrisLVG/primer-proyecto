@@ -16,8 +16,12 @@
 - `.gitignore`: Archivos excluidos de Git (`.venv/`, `__pycache__/`, `*.db`).
 - `src/primer_proyecto/`: Código fuente de la aplicación.
 - `AGENTS.md`: Reglas y guardarraíles del repositorio para el agente de IA.
-- `main.py`: Punto de entrada principal e itineración de rutas de la API FastAPI.
+- `main.py`: Punto de entrada y composición de FastAPI; crea las tablas, monta los routers de autenticación y dominio, y conserva `GET /`.
 - `autenticador.py`: `APIRouter` con prefijo `/auth`; agrupa registro, login, logout y dependencias de autenticación y control de rol. `main.py` lo registra con `app.include_router(autenticador.router)`.
+- `routers/usuarios.py`: rutas del dominio de usuarios bajo `/usuarios`.
+- `routers/servicios.py`: rutas del dominio de servicios bajo `/servicios`.
+- `routers/citas.py`: rutas del dominio de citas bajo `/citas`.
+- `utilidades.py`: constantes y reglas compartidas para roles, filtros, fechas, permisos y citas; no depende de routers ni de `autenticador.py`.
 - `database.py`: Configuración de SQLAlchemy y gestión de sesiones de base de datos.
 - `models.py`: Modelos ORM de la base de datos.
 - `schemas.py`: Esquemas Pydantic para validación de datos de entrada y salida.
@@ -90,8 +94,9 @@ Los cuatro valores válidos son `pendiente`, `confirmada`, `cancelada` y `termin
 - Redactar comentarios y docstrings en español.
 - Usar `ConfigDict(from_attributes=True)` en los esquemas Pydantic de respuesta.
 - NUNCA mezcles modelos de SQLAlchemy (`models.py`) con esquemas de validación Pydantic (`schemas.py`).
-- Inyectar la sesión de base de datos en los endpoints de `main.py` usando únicamente `Depends(get_db)`.
+- Inyectar la sesión de base de datos en los endpoints mediante `Depends(get_db)` o los aliases `Annotated` definidos en `autenticador.py`.
 - Mantener endpoints y dependencias de autenticación en `autenticador.py`; importar las dependencias desde ese módulo y montar su router en `main.py` con `app.include_router(...)`. No crear una aplicación `FastAPI` separada en módulos de rutas.
+- Mantener los endpoints de usuarios, servicios y citas en sus routers de `src/primer_proyecto/routers/`; `main.py` solo compone la aplicación y conserva `GET /`.
 - Retornar errores de negocio mediante `HTTPException` de FastAPI (`400`, `404`, `422`).
 - Ejecutar `db.rollback()` explícito en bloques `try/except` ante fallos de escritura en SQLite.
 

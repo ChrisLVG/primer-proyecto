@@ -1,6 +1,6 @@
 # Constitución del Proyecto: Sitio web de citas para barbería
 
-**Versión:** 1.2.0
+**Versión:** 1.3.0
 
 Principios innegociables del proyecto. Toda especificación, plan, tarea y cambio de código debe respetarlos. Si una especificación los contradice, se corrige la especificación o se enmienda esta constitución; nunca se ignora.
 
@@ -14,7 +14,8 @@ Principios innegociables del proyecto. Toda especificación, plan, tarea y cambi
 
 ## II. Capas separadas y sin duplicación
 
-- `models.py` (SQLAlchemy), `schemas.py` (Pydantic), `main.py` (aplicación y rutas del dominio) y `autenticador.py` (rutas y dependencias de autenticación) mantienen responsabilidades separadas.
+- `models.py` (SQLAlchemy), `schemas.py` (Pydantic), `main.py` (composición de la aplicación y ruta raíz), `routers/` (rutas del dominio) y `autenticador.py` (rutas y dependencias de autenticación) mantienen responsabilidades separadas.
+- Cada dominio puede definir un `APIRouter` en su módulo; `main.py` los registra en la única instancia de `FastAPI`, conservando los prefijos y las URLs públicas.
 - `autenticador.py` expone un `APIRouter` con prefijo `/auth`; `main.py` lo monta mediante `app.include_router(...)`. Los módulos de funcionalidad no crean una instancia paralela de `FastAPI`.
 - La sesión de BD se inyecta solo con `Depends(get_db)`.
 - La lógica de negocio reutilizable vive en funciones auxiliares; no se copia entre endpoints.
