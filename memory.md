@@ -6,6 +6,7 @@ CRUD completo de usuarios, servicios y citas. Feature 001 verificada por HTTP re
 Feature 002: T1-T11 completadas y validadas por el revisor RF por RF (veredicto: SIN CAMBIOS NECESARIOS). Fix Decisi�n 8 �8: contrasena opcional en PATCH /usuarios/{id} para establecer hash bcrypt al promover a barbero.
 Nota: T10 verificada por HTTP real (0 errores 500); caminos positivos de barbero ahora ejecutables en principio tras el fix.
 Refactor spec 004 implementada en `refactor/main2`: T1-T10; regresión final con 32 grupos HTTP/OpenAPI más logout/expiración, sin 500 y usando SQLite en memoria. Contrato y permisos conservados.
+Extensión aprobada: modularizar autenticación con `auth/{seguridad,sesiones,dependencias,routers}.py`; WIP preexistente en `main`. Plan T11-T12 aprobado; completar módulos y hacer regresión HTTP integral.
 
 ## Historial — Protección de usuarios (Feature 002)
 - `GET /usuarios/`: `get_current_user`; barbero→todos; usuario→solo propio. `response_model=list[UsuarioResponse]` para no exponer `contrasena_hash`.

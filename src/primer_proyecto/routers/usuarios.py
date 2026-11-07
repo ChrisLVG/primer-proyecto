@@ -1,15 +1,16 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
-from .. import autenticador, models, schemas, utilidades
+from .. import models, schemas, utilidades
+from ..auth import sesiones, seguridad, dependencias
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 
 @router.get("/", response_model=list[schemas.UsuarioResponse])
 def listar_usuarios(
-    db: autenticador.SesionDB,
-    current_user: autenticador.UsuarioActual,
+    db: sesiones.SesionDB,
+    current_user: dependencias.UsuarioActual,
 ):
     # RF-4.7: el barbero ve todos los usuarios; el usuario autenticado solo ve el suyo.
     if current_user.rol == utilidades.ROL_BARBERO:
@@ -28,8 +29,8 @@ def listar_usuarios(
 )
 def crear_usuario(
     usuario: schemas.UsuarioCreate,
-    db: autenticador.SesionDB,
-    _barbero: autenticador.SoloBarbero,
+    db: sesiones.SesionDB,
+    _barbero: seguridad.SoloBarbero,
 ):
     existing_usuario = db.query(models.Usuario).filter(
         models.Usuario.correo == usuario.correo
@@ -39,7 +40,7 @@ def crear_usuario(
 
     contrasena_hash = None
     if usuario.contrasena:
-        contrasena_hash = autenticador.hashear_contrasena(usuario.contrasena)
+        contrasena_hash = seguridad.hashear_contrasena(usuario.contrasena)
 
     try:
         nuevo_usuario = models.Usuario(
@@ -62,10 +63,10 @@ def crear_usuario(
 def actualizar_usuario(
     usuario_id: str,
     usuario: schemas.UsuarioUpdate,
-    db: autenticador.SesionDB,
-    current_user: autenticador.UsuarioActual,
+    db: sesiones.SesionDB,
+    current_user: dependencias.UsuarioActual,
 ):
-    usuario_db = utilidades.obtener_o_404(
+    usuario_db: models.Usuario = utilidades.obtener_o_404(
         db, models.Usuario, usuario_id, "El usuario no está registrado."
     )
 
@@ -97,7 +98,7 @@ def actualizar_usuario(
         usuario_db.correo = usuario.correo
 
     if usuario.contrasena is not None:
-        usuario_db.contrasena_hash = autenticador.hashear_contrasena(
+        usuario_db.contrasena_hash = seguridad.hashear_contrasena(
             usuario.contrasena
         )
 
@@ -117,8 +118,8 @@ def actualizar_usuario(
 @router.delete("/{usuario_id}")
 def eliminar_usuario(
     usuario_id: str,
-    db: autenticador.SesionDB,
-    _barbero: autenticador.SoloBarbero,
+    db: sesiones.SesionDB,
+    _barbero: seguridad.SoloBarbero,
 ):
     usuario_db = utilidades.obtener_o_404(
         db, models.Usuario, usuario_id, "El usuario no está registrado."

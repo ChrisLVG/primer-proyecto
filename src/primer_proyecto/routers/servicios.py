@@ -2,13 +2,14 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
-from .. import autenticador, models, schemas, utilidades
+from .. import models, schemas, utilidades
+from ..auth import sesiones, seguridad
 
 router = APIRouter(prefix="/servicios", tags=["Servicios"])
 
 
 @router.get("/")
-def listar_servicios(db: autenticador.SesionDB):
+def listar_servicios(db: sesiones.SesionDB):
     servicios = db.query(models.Servicio).all()
     return servicios
 
@@ -20,8 +21,8 @@ def listar_servicios(db: autenticador.SesionDB):
 )
 def crear_servicio(
     servicio: schemas.ServicioCreate,
-    db: autenticador.SesionDB,
-    _barbero: autenticador.SoloBarbero,
+    db: sesiones.SesionDB,
+    _barbero: seguridad.SoloBarbero,
 ):
     existing_servicio = db.query(models.Servicio).filter(
         models.Servicio.nombre == servicio.nombre
@@ -44,10 +45,10 @@ def crear_servicio(
 def actualizar_servicio(
     servicio_id: str,
     servicio: schemas.ServicioUpdate,
-    db: autenticador.SesionDB,
-    _barbero: autenticador.SoloBarbero,
+    db: sesiones.SesionDB,
+    _barbero: seguridad.SoloBarbero,
 ):
-    servicio_db = utilidades.obtener_o_404(
+    servicio_db: models.Servicio = utilidades.obtener_o_404(
         db, models.Servicio, servicio_id, "El servicio no está registrado."
     )
 
@@ -89,8 +90,8 @@ def actualizar_servicio(
 @router.delete("/{servicio_id}")
 def eliminar_servicio(
     servicio_id: str,
-    db: autenticador.SesionDB,
-    _barbero: autenticador.SoloBarbero,
+    db: sesiones.SesionDB,
+    _barbero: seguridad.SoloBarbero,
 ):
     servicio_db = utilidades.obtener_o_404(
         db, models.Servicio, servicio_id, "El servicio no está registrado."

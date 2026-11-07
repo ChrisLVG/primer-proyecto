@@ -121,3 +121,31 @@
 **Validación:** 32 grupos de verificaciones HTTP/OpenAPI aprobaron auth, permisos, status y JSON, CRUD de usuarios/servicios/citas, filtros, fechas, solapamientos, recálculo de precios, eliminaciones y conservación de sesiones; además se verificaron logout y expiración de sesión. No hubo HTTP 500; todas las pruebas utilizaron SQLite en memoria.
 
 **Aceptación:** todos los casos aprobados pasan y el archivo SQLite local no se utiliza.
+
+## Extensión aprobada — Modularización de autenticación
+
+**Aprobada:** 2026-11-02. Mantiene T1-T10 como trabajo histórico completado y agrega las tareas siguientes.
+
+## T11 — Separar autenticación por responsabilidad
+
+**Estado:** ⏳ Pendiente
+
+**Archivos:** completar `src/primer_proyecto/auth/{__init__,seguridad,sesiones,dependencias,routers}.py`; actualizar `src/primer_proyecto/main.py`, `src/primer_proyecto/routers/{usuarios,servicios,citas}.py`, `AGENTS.md` y `memory.md`; retirar el antiguo `src/primer_proyecto/autenticador.py` ya eliminado en el WIP.
+
+**Cambios:** dejar seguridad de contraseñas/tokens en `seguridad.py`, ciclo de sesiones en `sesiones.py`, dependencias/aliases en `dependencias.py` y endpoints en `routers.py`. Publicar desde `auth` los nombres que necesita la app y migrar todas las importaciones internas. Mantener un solo router `/auth`, mismos mensajes/status, hash bcrypt/SHA-256 y TTL de 24 h; no introducir ciclos ni una app FastAPI paralela.
+
+**Validación:** análisis de sintaxis/imports; cargar `src.primer_proyecto.main:app`; confirmar por OpenAPI que cada endpoint `/auth` se registra exactamente una vez y que usuarios/servicios/citas siguen importando sus dependencias.
+
+**Aceptación:** cada módulo tiene una responsabilidad, no queda referencia interna a `autenticador.py` y no se cambia el contrato HTTP.
+
+## T12 — Regresión HTTP de todos los endpoints
+
+**Estado:** ⏳ Pendiente
+
+**Archivos:** ninguno; actualizar `tasks.md`, `spec.md` y `memory.md` con los resultados.
+
+**Cambios:** ninguno; validar la app completa mediante Uvicorn y SQLite en memoria sin tocar la base local.
+
+**Validación:** recorrer todos los paths/métodos de OpenAPI y probar autenticación/sesiones, permisos por rol/propietario, CRUD de usuarios/servicios/citas, filtros y fechas, solapamiento, precio, borrado de dependencias, status codes, JSON y mensajes representativos; confirmar ausencia de HTTP 500.
+
+**Aceptación:** todos los endpoints del proyecto responden con el contrato esperado; el spec queda implementado solo tras superar regresión y análisis de imports.

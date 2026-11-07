@@ -4,7 +4,8 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
-from .. import autenticador, models, schemas, utilidades
+from .. import models, schemas, utilidades
+from ..auth import sesiones, seguridad, dependencias
 
 router = APIRouter(prefix="/citas", tags=["Citas"])
 
@@ -40,8 +41,8 @@ def listar_citas(
     ),
     limit: int = Query(100, ge=1, le=500, description="Máximo de citas a devolver"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
-    db: autenticador.SesionDB,
-    current_user: autenticador.UsuarioActual,
+    db: sesiones.SesionDB,
+    current_user: dependencias.UsuarioActual,
 ):
     """Lista las citas ordenadas por fecha, limitadas al alcance del usuario."""
     utilidades.validar_filtros_citas(db, origen, estado, usuario_id)
@@ -88,8 +89,8 @@ def listar_citas(
 )
 def crear_cita(
     cita: schemas.CitaCreate,
-    db: autenticador.SesionDB,
-    current_user: autenticador.UsuarioActual,
+    db: sesiones.SesionDB,
+    current_user: dependencias.UsuarioActual,
 ):
     existing_usuario = db.query(models.Usuario).filter(
         models.Usuario.id == cita.usuario_id
@@ -142,10 +143,10 @@ def crear_cita(
 def actualizar_cita(
     cita_id: str,
     cita: schemas.CitaUpdate,
-    db: autenticador.SesionDB,
-    current_user: autenticador.UsuarioActual,
+    db: sesiones.SesionDB,
+    current_user: dependencias.UsuarioActual,
 ):
-    existing_cita = utilidades.obtener_o_404(
+    existing_cita: models.Cita = utilidades.obtener_o_404(
         db, models.Cita, cita_id, "La cita no está registrada."
     )
 
@@ -200,8 +201,8 @@ def actualizar_cita(
 @router.delete("/{cita_id}")
 def eliminar_cita(
     cita_id: str,
-    db: autenticador.SesionDB,
-    current_user: autenticador.UsuarioActual,
+    db: sesiones.SesionDB,
+    current_user: dependencias.UsuarioActual,
 ):
     existing_cita = utilidades.obtener_o_404(
         db, models.Cita, cita_id, "La cita no está registrada."
